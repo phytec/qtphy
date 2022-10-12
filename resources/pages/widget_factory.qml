@@ -3,7 +3,7 @@
  * Copyright (c) 2021 PHYTEC Messtechnik GmbH
  */
 
-import QtQuick 2.0
+import QtQuick 2.15
 import QtQuick.Controls 2.0
 import QtQuick.Layouts 1.0
 import PhyTheme 1.0
@@ -61,7 +61,7 @@ Page {
                     Layout.fillWidth: true
                     placeholderText: "Phone number field"
                     inputMethodHints: Qt.ImhDialableCharactersOnly
-                    validator: RegExpValidator { regExp: /^[0-9\+\-\#\*\ ]{6,}$/ }
+                    validator: RegularExpressionValidator { regularExpression: /^[0-9\+\-\#\*\ ]{6,}$/ }
                 }
                 TextField {
                     Layout.fillWidth: true
