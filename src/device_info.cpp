@@ -111,9 +111,8 @@ void DeviceInfo::procDistributionFinished(int exitCode, QProcess::ExitStatus exi
     if (exitCode < 0) {
         distribution = "unknown";
     } else {
-        QRegExp rx("(Distributor ID:\\s+)([^\\n]+)");
-        rx.indexIn(procDistribution->readAll());
-        distribution = rx.cap(2);
+        QRegularExpression rx("(Distributor ID:\\s+)([^\\n]+)");
+        distribution = rx.match(procDistribution->readAll()).captured(2);
     }
 
     emit distributionChanged();
@@ -126,9 +125,8 @@ void DeviceInfo::procReleaseFinished(int exitCode, QProcess::ExitStatus exitStat
     if (exitCode < 0) {
         release = "unknown";
     } else {
-        QRegExp rx("(Release:\\s+)([^\\n]+)");
-        rx.indexIn(procRelease->readAll());
-        release = rx.cap(2);
+        QRegularExpression rx("(Release:\\s+)([^\\n]+)");
+        release = rx.match(procRelease->readAll()).captured(2);
     }
 
     emit releaseChanged();
@@ -141,9 +139,8 @@ void DeviceInfo::procCodenameFinished(int exitCode, QProcess::ExitStatus exitSta
     if (exitCode < 0) {
         codename = "unknown";
     } else {
-        QRegExp rx("(Codename:\\s+)([^\\n]+)");
-        rx.indexIn(procCodename->readAll());
-        codename = rx.cap(2);
+        QRegularExpression rx("(Codename:\\s+)([^\\n]+)");
+        codename = rx.match(procCodename->readAll()).captured(2);
     }
 
     emit codenameChanged();
@@ -168,9 +165,8 @@ void DeviceInfo::procCpuModelNameFinished(int exitCode, QProcess::ExitStatus exi
     if (exitCode < 0) {
         cpuModelName = "unknown";
     } else {
-        QRegExp rx("(model name\\t+: )([^\\n]+)");
-        rx.indexIn(procCpuModelName->readAll());
-        cpuModelName = rx.cap(2);
+        QRegularExpression rx("(model name\\t+: )([^\\n]+)");
+        cpuModelName = rx.match(procCpuModelName->readAll()).captured(2);
     }
 
     emit cpuModelNameChanged();
@@ -183,9 +179,8 @@ void DeviceInfo::procRamFinished(int exitCode, QProcess::ExitStatus exitStatus)
     if (exitCode < 0) {
         ram = "unknown";
     } else {
-        QRegExp rx("(MemTotal:\\s+)([^\\n]+)");
-        rx.indexIn(procRam->readAll());
-        ram = rx.cap(2);
+        QRegularExpression rx("(MemTotal:\\s+)([^\\n]+)");
+        ram = rx.match(procRam->readAll()).captured(2);
     }
 
     emit ramChanged();
