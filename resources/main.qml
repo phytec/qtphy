@@ -117,19 +117,19 @@ ApplicationWindow {
         asynchronous: true
         z: 1
 
-        Rectangle  {
+        /*Rectangle  {
             color: PhyTheme.background
             opacity: 0.96
             z: 2
             anchors.fill: parent
-        }
+        }*/
         ColumnLayout {
             anchors.fill: parent
             spacing: 0
             z: 3
 
             Rectangle {
-                height: 42
+                height: 44
                 color: "black"
                 Layout.fillWidth: true
 
@@ -141,13 +141,17 @@ ApplicationWindow {
                     anchors.fill: parent
                     spacing: 6
 
+                    Label {
+                        text: "qtphy"
+                        color: PhyTheme.white
+                        font.pointSize: 18
+                    }
                     PhyDateTime {
                         color: PhyTheme.white
                         font.pointSize: 18
                         Layout.margins: 0
-                    }
-                    Item {
                         Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
                     }
                     Label {
                         text: PhyTheme.iconFont.wifiSlash
@@ -176,23 +180,10 @@ ApplicationWindow {
                     height: listView.height - 2 * PhyTheme.marginBig
 
                     Rectangle {
-                        width: PhyTheme.radiusBig * 4
-                        height: width
-                        radius: width / 2
-                        Layout.alignment: Qt.AlignHCenter
-                        Layout.topMargin: PhyTheme.marginBig
-                        color: PhyTheme.baseSelected
-
-                        Label {
-                            text: icon
-                            color: PhyTheme.labelHighlight
-                            font.pointSize: 48
-                            anchors.centerIn: parent
-                        }
-                    }
-                    Rectangle {
                         color: PhyTheme.white
                         radius: PhyTheme.radiusRegular
+                        border.color: "#22000000"
+                        border.width: 1
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.margins: PhyTheme.marginBig
@@ -200,7 +191,7 @@ ApplicationWindow {
                         layer.effect: DropShadow {
                             transparentBorder: true
                             horizontalOffset: 0
-                            verticalOffset: 8
+                            verticalOffset: 6
                             radius: 32
                             samples: radius * 2 + 1
                             color: "#60000000"
@@ -241,6 +232,30 @@ ApplicationWindow {
                                 pageLoader.source = page
                                 stack.push(pageLoader)
                             }
+                        }
+                    }
+                    Rectangle {
+                        width: PhyTheme.radiusBig * 4
+                        height: width
+                        radius: width / 2
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.topMargin: -height / 2
+                        color: PhyTheme.baseSelected
+                        layer.enabled: true
+                        layer.effect: DropShadow {
+                            transparentBorder: true
+                            horizontalOffset: 0
+                            verticalOffset: 2
+                            radius: 12
+                            samples: radius * 2 + 1
+                            color: "#60000000"
+                        }
+
+                        Label {
+                            text: icon
+                            color: PhyTheme.labelHighlight
+                            font.pointSize: 48
+                            anchors.centerIn: parent
                         }
                     }
                 }
