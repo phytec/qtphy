@@ -1,17 +1,16 @@
-qtphy – PHYTEC's Qt5 Reference Implementation
+qtphy – PHYTEC's Qt6 Reference Implementation
 ================================================================================
 
 Building
 --------------------------------------------------------------------------------
 
-Build *qtphy* with `qmake` and `make`:
+Build *qtphy* with the [Meson Build system](https://mesonbuild.com/):
 ```
-mkdir build
-cd build
-qmake ..
-bindir=/usr/bin make
+meson setup build
+meson compile -C build
 ```
-Make sure to specify `bindir` when executing `make`.
+After building, the resulting binary is located at `build/qtphy` and can be
+directly executed.
 
 Maintainers
 --------------------------------------------------------------------------------
