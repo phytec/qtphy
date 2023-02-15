@@ -3,11 +3,13 @@
  * Copyright (c) 2021 PHYTEC Messtechnik GmbH
  */
 
-import QtQuick 2.6
-import QtQuick.Controls 2.0
-import QtQuick.Layouts 1.0
-import QtQuick.Window 2.2
-import PhyTheme 1.0
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQuick.Window
+import Qt5Compat.GraphicalEffects
+import PhyTheme
+import PhyControls
 
 ApplicationWindow {
     visible: true
@@ -17,15 +19,6 @@ ApplicationWindow {
 
     property int itemAngle: 55
     property int itemSize: 0.4 * width
-
-    function showPage() {
-        var page = pageModel.get(pathView.currentIndex)
-
-        if (page.page) {
-            pageLoader.source = page.page
-            stack.push(pageLoader)
-        }
-    }
 
     FontLoader {
         source: "qrc:///fonts/phosphor.woff2"
@@ -117,122 +110,153 @@ ApplicationWindow {
         }
     }
 
-    Rectangle {
+    Image {
         id: mainView
+        source: "qrc:///images/background.jpg"
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        z: 1
 
-        Component {
-            id: pageDelegate
+        Rectangle  {
+            color: PhyTheme.background
+            opacity: 0.96
+            z: 2
+            anchors.fill: parent
+        }
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 0
+            z: 3
 
             Rectangle {
-                id: itemRectangle
-                color: PhyTheme.black
-                z: PathView.onPath ? PathView.z : 0
-                opacity: PathView.onPath ? PathView.pageOpacity : 0
-                width: 0.3 * parent.width
-                height: Math.min(0.36 * parent.width, 0.9 * parent.height)
+                height: 42
+                color: "black"
+                Layout.fillWidth: true
 
                 RowLayout {
-                    spacing: 0
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
+                    anchors.topMargin: 2
+                    anchors.bottomMargin: 2
                     anchors.fill: parent
+                    spacing: 6
 
-                    ColumnLayout {
-                        spacing: PhyTheme.marginBig
-                        Layout.margins: PhyTheme.marginBig
+                    PhyDateTime {
+                        color: PhyTheme.white
+                        font.pointSize: 18
+                        Layout.margins: 0
+                    }
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: PhyTheme.iconFont.wifiSlash
+                        color: PhyTheme.white
+                        font.pointSize: 20
+                    }
+                    Label {
+                        text: PhyTheme.iconFont.speakerX
+                        color: PhyTheme.white
+                        font.pointSize: 20
+                    }
+                    Label {
+                        text: PhyTheme.iconFont.batteryMedium
+                        color: PhyTheme.white
+                        font.pointSize: 20
+                    }
+                }
+            }
+
+            Component {
+                id: pageDelegate
+
+                ColumnLayout {
+                    spacing: 0
+                    width: 0.45 * listView.width
+                    height: listView.height - 2 * PhyTheme.marginBig
+
+                    Rectangle {
+                        width: PhyTheme.radiusBig * 4
+                        height: width
+                        radius: width / 2
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.topMargin: PhyTheme.marginBig
+                        color: PhyTheme.baseSelected
 
                         Label {
                             text: icon
-                            color: PhyTheme.teal1
-                            font.pointSize: Math.max(0.05 * parent.width, 48)
-                            Layout.alignment: Qt.AlignHCenter
+                            color: PhyTheme.labelHighlight
+                            font.pointSize: 48
+                            anchors.centerIn: parent
                         }
-                        Label {
-                            text: name
-                            elide: Text.ElideRight
-                            color: PhyTheme.white
-                            font.pointSize: Math.max(0.015 * parent.width, 24)
-                            Layout.alignment: Qt.AlignHCenter
-                            Layout.fillWidth: true
+                    }
+                    Rectangle {
+                        color: PhyTheme.white
+                        radius: PhyTheme.radiusRegular
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.margins: PhyTheme.marginBig
+                        layer.enabled: true
+                        layer.effect: DropShadow {
+                            transparentBorder: true
+                            horizontalOffset: 0
+                            verticalOffset: 8
+                            radius: 32
+                            samples: radius * 2 + 1
+                            color: "#60000000"
                         }
-                        Label {
-                            text: description
-                            elide: Text.ElideRight
-                            wrapMode: Text.WordWrap
-                            color: PhyTheme.gray1
-                            font.weight: Font.Light
-                            font.pointSize: Math.max(0.01 * parent.width, 20)
-                            Layout.fillHeight: true
-                            Layout.fillWidth: true
+
+                        RowLayout {
+                            spacing: 0
+                            anchors.fill: parent
+
+                            ColumnLayout {
+                                spacing: PhyTheme.marginBig
+                                Layout.margins: PhyTheme.marginBig
+
+                                Label {
+                                    text: name
+                                    elide: Text.ElideRight
+                                    color: PhyTheme.labelHighlight
+                                    font.pointSize: 24
+                                    font.weight: Font.DemiBold
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.fillWidth: true
+                                }
+                                Label {
+                                    text: description
+                                    elide: Text.ElideRight
+                                    wrapMode: Text.WordWrap
+                                    color: PhyTheme.label
+                                    font.pointSize: 20
+                                    Layout.fillHeight: true
+                                    Layout.fillWidth: true
+                                }
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                console.log(page)
+                                pageLoader.source = page
+                                stack.push(pageLoader)
+                            }
                         }
                     }
                 }
             }
-        }
 
-        PathView {
-            id: pathView
-            anchors.fill: parent
-            model: pageModel
-            delegate: pageDelegate
-            pathItemCount: 6 // must be even for proper item placement
-            snapMode: PathView.SnapToItem
-            preferredHighlightBegin: 0.5
-            preferredHighlightEnd: 0.5
-
-            Image {
-                anchors.fill: parent
-                source: "qrc:///images/background.jpg"
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-            }
-
-            MouseArea {
-                id: mouseAreaShowPage
-                x: 0.35 * parent.width
-                y: (parent.height - Math.min(0.36 * parent.width, 0.9 * parent.height)) / 2
-                width: 0.3 * parent.width
-                height: Math.min(0.36 * parent.width, 0.9 * parent.height)
-                onClicked: if (!parent.moving) showPage()
-            }
-            MouseArea {
-                x: 0.0325 * parent.width
-                y: mouseAreaShowPage.y
-                width: mouseAreaShowPage.width
-                height: mouseAreaShowPage.height
-                onClicked: pathView.currentIndex = pathView.currentIndex - 1
-            }
-            MouseArea {
-                x: 0.6675 * parent.width
-                y: mouseAreaShowPage.y
-                width: mouseAreaShowPage.width
-                height: mouseAreaShowPage.height
-                onClicked: pathView.currentIndex = pathView.currentIndex + 1
-            }
-
-            path: Path {
-                startX: 0
-                startY: 0.5 * height
-
-                PathAttribute { name: "pageOpacity"; value: 0 }
-                PathAttribute { name: "z"; value: 0 }
-
-                PathLine { x: 0.1 * width; y: 0.5 * height }
-                PathPercent { value: 0.29 }
-                PathAttribute { name: "pageOpacity"; value: 0.8 }
-                PathAttribute { name: "z"; value: 10 }
-
-                PathLine { x: 0.5 * width; y: 0.5 * height }
-                PathPercent { value: 0.5 }
-                PathAttribute { name: "pageOpacity"; value: 1 }
-                PathAttribute { name: "z"; value: 20 }
-
-                PathLine { x: 0.9 * width; y: 0.5 * height }
-                PathPercent { value: 0.71 }
-                PathAttribute { name: "pageOpacity"; value: 0.8 }
-                PathAttribute { name: "z"; value: 10 }
-
-                PathLine { x: width; y: 0.5 * height }
-                PathAttribute { name: "pageOpacity"; value: 0 }
-                PathAttribute { name: "z"; value: 0 }
+            ListView {
+                id: listView
+                model: pageModel
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                Layout.leftMargin: 4 * PhyTheme.marginBig
+                displayMarginBeginning: width * 2
+                displayMarginEnd: width * 2
+                delegate: pageDelegate
+                snapMode: ListView.SnapToItem
+                orientation: ListView.Horizontal
             }
         }
     }

@@ -22,6 +22,7 @@ T.Button {
     background: Rectangle {
         implicitWidth: 100
         implicitHeight: 40
+        radius: height / 2
         visible: !control.flat || control.checked || control.down
         color: control.checked || control.down ? PhyTheme.black : PhyTheme.gray4
     }

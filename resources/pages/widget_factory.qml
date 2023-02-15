@@ -6,8 +6,9 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.0
 import QtQuick.Layouts 1.0
+import QtQuick.VirtualKeyboard 2.0
 import PhyTheme 1.0
-import "../controls"
+import PhyControls 1.0
 
 Page {
     header: PhyToolBar {
@@ -16,9 +17,10 @@ Page {
     }
     Flickable {
         id: scrollView
-        anchors.fill: parent
         contentWidth: content.width
         contentHeight: content.height
+        height: inputPanel.visible ? parent.height - inputPanel.height : parent.height
+        width: parent.width
 
         RowLayout {
             id: content
@@ -120,12 +122,15 @@ Page {
                     second.value: 0.7
                     Layout.fillWidth: true
                 }
-                ProgressBar {
-                    value: slider.value
+                Switch {
+                    id: switchIndeterminate
+                    text: "Indeterminate Progress Bar"
+                    checked: false
                     Layout.fillWidth: true
                 }
                 ProgressBar {
-                    indeterminate: true
+                    value: slider.value
+                    indeterminate: switchIndeterminate.checked
                     Layout.fillWidth: true
                 }
                 ComboBox {
@@ -152,5 +157,10 @@ Page {
                 }
             }
         }
+    }
+    InputPanel {
+        id: inputPanel
+        width: parent.width
+        anchors.bottom: parent.bottom
     }
 }

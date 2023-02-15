@@ -6,8 +6,13 @@
         <file>PhyStyle/Label.qml</file>
         <file>PhyStyle/ToolBar.qml</file>
         <file>PhyStyle/ToolButton.qml</file>
-        <file>controls/PhyFileDialog.qml</file>
-        <file>controls/PhyToolBar.qml</file>
+        <file>PhyStyle/qmldir</file>
+        <file>PhyTheme/PhyTheme.qml</file>
+        <file>PhyTheme/qmldir</file>
+        <file>PhyControls/PhyDateTime.qml</file>
+        <file>PhyControls/PhyFileDialog.qml</file>
+        <file>PhyControls/PhyToolBar.qml</file>
+        <file>PhyControls/qmldir</file>
         <file>fonts/phosphor.woff2</file>
         <file>images/background.jpg</file>
         <file>images/company.jpg</file>
@@ -18,7 +23,5 @@
         <file>pages/multitouch.qml</file>
         <file>pages/rauc.qml</file>
         <file>pages/widget_factory.qml</file>
-        <file>themes/PhyTheme/PhyTheme.qml</file>
-        <file>themes/PhyTheme/qmldir</file>
     </qresource>
 </RCC>

@@ -8,7 +8,7 @@ import QtQuick.Controls 2.0
 import QtQuick.Layouts 1.0
 import Phytec.DeviceInfo 1.0
 import PhyTheme 1.0
-import "../controls"
+import PhyControls 1.0
 
 Page {
     header: PhyToolBar {

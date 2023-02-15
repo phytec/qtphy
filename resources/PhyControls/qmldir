@@ -1,0 +1,4 @@
+module PhyControls
+PhyDateTime 1.0 PhyDateTime.qml
+PhyFileDialog 1.0 PhyFileDialog.qml
+PhyToolBar 1.0 PhyToolBar.qml

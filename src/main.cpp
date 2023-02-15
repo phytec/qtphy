@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: MIT
- * Copyright (c) 2021 PHYTEC Messtechnik GmbH
+ * Copyright (c) 2022 PHYTEC Messtechnik GmbH
  */
 
 #include <QGuiApplication>
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<Rauc>("Phytec.Rauc", 1, 0, "Rauc");
 
     QQmlApplicationEngine engine;
-    engine.addImportPath("qrc:///themes");
+    engine.addImportPath("qrc:/");
     engine.rootContext()->setContextProperty("raucHawkbitConfigPath",
                                              parser.value("rauc-hawkbit-config"));
     engine.load(QUrl(QStringLiteral("qrc:///main.qml")));
