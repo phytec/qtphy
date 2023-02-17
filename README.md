@@ -1,6 +1,8 @@
 qtphy – PHYTEC's Qt6 Reference Implementation
 ================================================================================
 
+[![Build status](https://github.com/phytec/qtphy/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/phytec/qtphy/actions/workflows/build.yml)
+
 Building
 --------------------------------------------------------------------------------
 
