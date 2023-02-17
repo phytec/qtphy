@@ -6,7 +6,7 @@ project(
 )
 
 qt6 = import('qt6')
-qt6_dep = dependency('qt6', modules : ['Qml', 'Quick', 'DBus', 'Multimedia'])
+qt6_dep = dependency('qt6', modules : ['Core', 'Qml', 'Quick', 'Gui', 'DBus', 'Multimedia'])
 
 headers = [
   'src/device_info.hpp',
