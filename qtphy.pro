@@ -15,5 +15,5 @@ HEADERS += \
 RESOURCES += \
     resources/resources.qrc
 
-target.path = $$(bindir)/qtphy
+target.path = $$(bindir)
 INSTALLS += target
