@@ -3,11 +3,11 @@
  * Copyright (c) 2021 PHYTEC Messtechnik GmbH
  */
 
-import QtQuick 2.0
-import QtQuick.Controls 2.0
-import QtQuick.Layouts 1.0
-import Qt.labs.folderlistmodel 2.15
-import PhyTheme 1.0
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import Qt.labs.folderlistmodel
+import PhyTheme
 import "../controls"
 
 Page {
