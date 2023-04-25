@@ -28,6 +28,12 @@
 // #include <opencv2/videoio.hpp>
 #include <iostream>
 
+#include <qqmlextensionplugin.h>
+
+#include <qqmlengine.h>
+#include <qquickimageprovider.h>
+#include <QImage>
+#include <QPainter>
 #include "camera_demo.hpp"
 
 // qInfo() << "std out!";
@@ -55,7 +61,6 @@
 
 // }
 
-
 CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
 {
     connect(&tUpdate, &QTimer::timeout, this, &CameraDemo::updateFrame);
@@ -63,27 +68,34 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
 
 CameraDemo::~CameraDemo()
 {
-    qDebug() << "destroy CameraDemo";
     cap.release();
     tUpdate.stop();
 }
 
 void CameraDemo::openCamera()
 {
-    qDebug() << "openCamera Function";
-    cap.open(1);
+    std::string pipeline = "v4l2src device=/dev/video-csi1 ! video/x-bayer,format=grbg, width=1280, height=720 ! appsink";
+    cap = cv::VideoCapture(pipeline, cv::CAP_GSTREAMER);
+
+    // cap.open(1);
     double fps = cap.get(cv::CAP_PROP_FPS);
     qDebug() << "fps: " << fps;
-    // tUpdate.start(1000 / fps);
-    tUpdate.start(1000 / 30); // 30 fps
+    tUpdate.start(1000 / fps);
+    // tUpdate.start(1000 / 30); // 30 fps
 }
 
 void CameraDemo::updateFrame()
 {
     qDebug() << "updating frame";
-    cap >> frame;
+    cv::Mat rawFrame;
 
-    QImage image = QImage(frame.data, frame.cols, frame.rows, QImage::Format_RGB888).rgbSwapped();
+    cap >> rawFrame;
+    cv::cvtColor(rawFrame, frame, cv::COLOR_BayerGB2RGB);
+
+    // cv::cvtColor(rawFrame2, frame, cv::COLOR_BGR2RGB);
+    QImage image = QImage(frame.data, frame.cols, frame.rows, QImage::Format_RGB888);
+
+    // QImage image = QImage(frame.data, frame.cols, frame.rows, QImage::Format_RGB888).rgbSwapped();
     emit newImage(image);
 }
 
@@ -91,29 +103,36 @@ void CameraDemo::updateFrame()
 
 OpencvImageProvider::OpencvImageProvider()
     : QQuickImageProvider(QQuickImageProvider::Image)
+// : QQuickImageProvider(QQuickImageProvider::Pixmap)
 {
-    qDebug() << "image provider constructor";
-
-    image = QImage(200, 200, QImage::Format_RGB32);
+    image = QImage(200, 200, QImage::Format_RGB888);
     image.fill(QColor("blue"));
 }
+
+// QPixmap OpencvImageProvider::requestPixmap(const QString &id, QSize *size, const QSize &requestedSize)
+// {
+//     int width = 100;
+//     int height = 50;
+
+//     if (size)
+//         *size = QSize(width, height);
+//     QPixmap pixmap(requestedSize.width() > 0 ? requestedSize.width() : width,
+//                    requestedSize.height() > 0 ? requestedSize.height() : height);
+//     pixmap.fill(QColor(id).rgba());
+//     return pixmap;
+// }
 
 QImage OpencvImageProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
 {
     Q_UNUSED(id);
 
-    qDebug() << "image provider requestImage";
-    return image;
-
     if (size)
     {
-        qDebug() << "image provider requestImage_1";
         *size = image.size();
     }
 
     if (requestedSize.width() > 0 && requestedSize.height() > 0)
     {
-        qDebug() << "image provider requestImage_2";
         image = image.scaled(requestedSize.width(), requestedSize.height(), Qt::KeepAspectRatio);
     }
     return image;
@@ -121,10 +140,9 @@ QImage OpencvImageProvider::requestImage(const QString &id, QSize *size, const Q
 
 void OpencvImageProvider::updateImage(const QImage &image)
 {
-    qDebug() << "position 9";
-    if (!image.isNull() && this->image != image)
-    {
-        this->image = image;
-        emit imageChanged();
-    }
+    // if (!image.isNull() && this->image != image)
+    // {
+    // }
+    this->image = image;
+    emit imageChanged();
 }

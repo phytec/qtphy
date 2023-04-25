@@ -32,12 +32,12 @@ class OpencvImageProvider : public QQuickImageProvider
 public:
     OpencvImageProvider();
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override;
+    // QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override;
 
     ~OpencvImageProvider()
     {
         qDebug() << "destroy OpencvImageProvider";
     }
-
 
 public slots:
     void updateImage(const QImage &image);

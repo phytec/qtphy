@@ -73,23 +73,18 @@ int main(int argc, char *argv[])
 
     CameraDemo cameraDemo;
     OpencvImageProvider* cameraFrameProvider = new OpencvImageProvider;
-    // OpencvImageProvider *cameraFrameProvider(new OpencvImageProvider);
 
     engine.rootContext()->setContextProperty("cameraDemo", &cameraDemo);
     engine.rootContext()->setContextProperty("cameraFrameProvider", cameraFrameProvider);
-    // engine.addImageProvider(QLatin1String("camera"), cameraFrameProvider);
-    engine.addImageProvider("camera", cameraFrameProvider);
-    QObject::connect(&cameraDemo, &CameraDemo::newImage, cameraFrameProvider, &OpencvImageProvider::updateImage);
 
-    qDebug() << "asdf_1: ";
+    engine.addImageProvider(QLatin1String("myCam"), cameraFrameProvider);
+    QObject::connect(&cameraDemo, &CameraDemo::newImage, cameraFrameProvider, &OpencvImageProvider::updateImage);
 
     engine.addImportPath("qrc:///themes");
     engine.rootContext()->setContextProperty("raucHawkbitConfigPath",
                                              parser.value("rauc-hawkbit-config"));
     engine.rootContext()->setContextProperty("enabledPages", enabledPages);
     engine.load(QUrl(QStringLiteral("qrc:///main.qml")));
-
-    qDebug() << "asdf_2: ";
 
     return app.exec();
 }

@@ -39,23 +39,19 @@ Page {
         anchors.fill: parent
         fillMode: Image.PreserveAspectFit
         property bool counter: false
-        source: "image://camera/image"
-        // source: "image://colors/red"
+        source: "image://myCam/image"
         asynchronous: false
         cache: false
 
         function reloadImage() {
-            qDebug() << "in qml function reloadImage";
             counter = !counter
-            // source = "image://camera/image?id=" + counter
+            source = "image://myCam/image?id=" + counter
         }
     }
     Connections {
-        // target: cameraDemo.cameraFrameProvider
         target: cameraFrameProvider
 
         function onImageChanged() {
-            qDebug() << "in qml function onImageChanged";
             streamImage.reloadImage()
         }
     }
