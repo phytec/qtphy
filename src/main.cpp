@@ -11,6 +11,7 @@
 #include <QFile>
 #include "device_info.hpp"
 #include "rauc.hpp"
+#include "camera_demo.hpp"
 
 void writeDefaultSettings()
 {
@@ -33,6 +34,7 @@ void writeDefaultSettings()
     settings.endArray();
 }
 
+#include <QDebug>
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
@@ -41,14 +43,10 @@ int main(int argc, char *argv[])
 
     QCommandLineParser parser;
     parser.addHelpOption();
-    parser.addOptions({
-            {
-                {"c", "rauc-hawkbit-config"},
-                "RAUC hawkBit client configuration path",
-                "path",
-                "/etc/rauc-hawkbit-updater/config.conf"
-            }
-    });
+    parser.addOptions({{{"c", "rauc-hawkbit-config"},
+                        "RAUC hawkBit client configuration path",
+                        "path",
+                        "/etc/rauc-hawkbit-updater/config.conf"}});
     parser.process(app);
 
     QSettings settings;
@@ -69,13 +67,29 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<DeviceInfo>("Phytec.DeviceInfo", 1, 0, "DeviceInfo",
                                          DeviceInfo::singletontypeProvider);
     qmlRegisterType<Rauc>("Phytec.Rauc", 1, 0, "Rauc");
+    qmlRegisterType<CameraDemo>("Phytec.CameraDemo", 1, 0, "CameraDemo");
 
     QQmlApplicationEngine engine;
+
+    CameraDemo cameraDemo;
+    OpencvImageProvider* cameraFrameProvider = new OpencvImageProvider;
+    // OpencvImageProvider *cameraFrameProvider(new OpencvImageProvider);
+
+    engine.rootContext()->setContextProperty("cameraDemo", &cameraDemo);
+    engine.rootContext()->setContextProperty("cameraFrameProvider", cameraFrameProvider);
+    // engine.addImageProvider(QLatin1String("camera"), cameraFrameProvider);
+    engine.addImageProvider("camera", cameraFrameProvider);
+    QObject::connect(&cameraDemo, &CameraDemo::newImage, cameraFrameProvider, &OpencvImageProvider::updateImage);
+
+    qDebug() << "asdf_1: ";
+
     engine.addImportPath("qrc:///themes");
     engine.rootContext()->setContextProperty("raucHawkbitConfigPath",
                                              parser.value("rauc-hawkbit-config"));
     engine.rootContext()->setContextProperty("enabledPages", enabledPages);
     engine.load(QUrl(QStringLiteral("qrc:///main.qml")));
+
+    qDebug() << "asdf_2: ";
 
     return app.exec();
 }
