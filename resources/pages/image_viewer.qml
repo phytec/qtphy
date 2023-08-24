@@ -149,6 +149,7 @@ Page {
 
                         ToolButton {
                             text: PhyTheme.iconFont.magnifyingGlassPlus
+                            font.family: icons.font.family
                             horizontalPadding: PhyTheme.marginRegular
                             onClicked: {
                                 detailedImage.width *= 1.2
@@ -157,6 +158,7 @@ Page {
                         }
                         ToolButton {
                             text: PhyTheme.iconFont.magnifyingGlassMinus
+                            font.family: icons.font.family
                             horizontalPadding: PhyTheme.marginRegular
                             onClicked: {
                                 detailedImage.width *= 0.8333
@@ -165,6 +167,7 @@ Page {
                         }
                         ToolButton {
                             text: PhyTheme.iconFont.frameCorners
+                            font.family: icons.font.family
                             horizontalPadding: PhyTheme.marginRegular
                             onClicked: {
                                 detailedImage.width = detailedImageContainer.width
@@ -175,6 +178,7 @@ Page {
                         }
                         ToolButton {
                             text: PhyTheme.iconFont.numberSquareOne
+                            font.family: icons.font.family
                             horizontalPadding: PhyTheme.marginRegular
                             onClicked: {
                                 detailedImage.width = detailedImage.sourceSize.width

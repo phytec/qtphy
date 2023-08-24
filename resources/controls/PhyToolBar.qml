@@ -19,6 +19,7 @@ ToolBar {
         ToolButton {
             id: buttonBack
             text: PhyTheme.iconFont.arrowLeft
+            font.family: icons.font.family
             flat: true
             leftPadding: PhyTheme.marginRegular
             rightPadding: PhyTheme.marginRegular
@@ -33,6 +34,7 @@ ToolBar {
         ToolButton {
             id: buttonMenu
             text: PhyTheme.iconFont.list
+            font.family: icons.font.family
             flat: true
             visible: false
             leftPadding: PhyTheme.marginRegular

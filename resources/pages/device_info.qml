@@ -32,6 +32,7 @@ Page {
                 spacing: PhyTheme.marginRegular
                 Label {
                     text: "  " + PhyTheme.iconFont.code + "  "
+                    font.family: icons.font.family
                     color: PhyTheme.white
                     background: Rectangle { color: PhyTheme.teal2 }
                 }
@@ -55,6 +56,7 @@ Page {
                 spacing: PhyTheme.marginRegular
                 Label {
                     text: "  " + PhyTheme.iconFont.cpu + "  "
+                    font.family: icons.font.family
                     color: PhyTheme.white
                     background: Rectangle { color: PhyTheme.teal2 }
                 }
