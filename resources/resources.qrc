@@ -8,7 +8,7 @@
         <file>PhyStyle/ToolButton.qml</file>
         <file>controls/PhyFileDialog.qml</file>
         <file>controls/PhyToolBar.qml</file>
-        <file>fonts/phosphor.woff2</file>
+        <file>fonts/MaterialIcons-Regular.ttf</file>
         <file>images/background.jpg</file>
         <file>images/company.jpg</file>
         <file>pages/about.qml</file>

@@ -28,50 +28,49 @@ ApplicationWindow {
     }
 
     FontLoader {
-        source: "qrc:///fonts/phosphor.woff2"
+        source: "qrc:/fonts/MaterialIcons-Regular.ttf"
     }
-
     ListModel {
         id: pageModel
 
         ListElement {
-            icon: "\uf1dd"
+            icon: "\ue3f4"
             name: "Image Viewer"
             description: "View images in a gallery"
             page: "qrc:///pages/image_viewer.qml"
         }
         ListElement {
-            icon: "\uf172"
+            icon: "\ue8da"
             name: "Multimedia"
             description: "Play movies with hardware acceleration"
             page: "qrc:///pages/multimedia.qml"
         }
         ListElement {
-            icon: "\uf14b"
+            icon: "\ue8d7"
             name: "RAUC – Update Client"
             description: "View the RAUC status and update your device with new software"
             page: "qrc:///pages/rauc.qml"
         }
         ListElement {
-            icon: "\uf1be"
+            icon: "\ue913"
             name: "Multitouch"
             description: "Move multiple objects at once by touching them with your fingers"
             page: "qrc:///pages/multitouch.qml"
         }
         ListElement {
-            icon: "\uf119"
+            icon: "\ue322"
             name: "Device Information"
             description: "Get information about the device's hardware and software components"
             page: "qrc:///pages/device_info.qml"
         }
         ListElement {
-            icon: "\uf19a"
+            icon: "\ue1bd"
             name: "Widget Factory"
             description: "Try out different widgets and controls of Qt"
             page: "qrc:///pages/widget_factory.qml"
         }
         ListElement {
-            icon: "\uf1e0"
+            icon: "\ue88e"
             name: "About PHYTEC"
             description: "General information about PHYTEC"
             page: "qrc:///pages/about.qml"
