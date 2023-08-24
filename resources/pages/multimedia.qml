@@ -19,7 +19,7 @@ Page {
             video.pause()
         }
         buttonMenu {
-            text: PhyTheme.iconFont.folderOpen + " Open"
+            text: PhyTheme.iconFont.folderOpen
             onClicked: fileDialog.visible = true
             visible: true
         }
