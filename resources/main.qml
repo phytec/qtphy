@@ -28,6 +28,7 @@ ApplicationWindow {
     }
 
     FontLoader {
+        id: icons
         source: "qrc:/fonts/MaterialIcons-Regular.ttf"
     }
     ListModel {
@@ -141,6 +142,7 @@ ApplicationWindow {
                         Label {
                             text: icon
                             color: PhyTheme.teal1
+                            font.family: icons.font.family
                             font.pointSize: Math.max(0.05 * parent.width, 48)
                             Layout.alignment: Qt.AlignHCenter
                         }

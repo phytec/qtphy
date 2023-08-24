@@ -20,6 +20,7 @@ Page {
         }
         buttonMenu {
             text: PhyTheme.iconFont.folderOpen
+            font.family: icons.font.family
             onClicked: fileDialog.visible = true
             visible: true
         }
@@ -36,18 +37,22 @@ Page {
 
                 ToolButton {
                     text: PhyTheme.iconFont.play
+                    font.family: icons.font.family
                     onClicked: video.play()
                 }
                 ToolButton {
                     text: PhyTheme.iconFont.pause
+                    font.family: icons.font.family
                     onClicked: video.pause()
                 }
                 ToolButton {
                     text: PhyTheme.iconFont.skipBack
+                    font.family: icons.font.family
                     onClicked: video.seek(video.position - 5000)
                 }
                 ToolButton {
                     text: PhyTheme.iconFont.skipForward
+                    font.family: icons.font.family
                     onClicked: video.seek(video.position + 5000)
                 }
                 Slider {
@@ -73,6 +78,7 @@ Page {
         }
         Label {
             text: PhyTheme.iconFont.pause
+            font.family: icons.font.family
             anchors.centerIn: parent
             color: PhyTheme.white
             scale: 4

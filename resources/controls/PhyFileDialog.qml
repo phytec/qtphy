@@ -39,6 +39,7 @@ Rectangle {
 
                 Label {
                     text: folderListModel.isFolder(index) ? PhyTheme.iconFont.folder : PhyTheme.iconFont.file
+                    font.family: icons.font.family
                     Layout.leftMargin: PhyTheme.marginSmall
                 }
                 Label {
