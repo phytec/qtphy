@@ -33,7 +33,7 @@ Page {
         id: folderModel
         nameFilters: ["*.jpg"]
         showDirs: false
-        folder: "file:///home/schwan/downloads/qtphy-pictures"
+        folder: "file:///usr/share/qtphy/images"
     }
 
     Component {
