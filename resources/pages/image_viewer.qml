@@ -31,7 +31,7 @@ Page {
 
     FolderListModel {
         id: folderModel
-        nameFilters: ["*.jpg"]
+        nameFilters: ["*.jpg", "*.JPG", "*.jpeg", "*.png", "*.webp", "*.bmp"]
         showDirs: false
         folder: "file:///usr/share/qtphy/images"
     }
