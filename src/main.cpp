@@ -69,8 +69,8 @@ int main(int argc, char *argv[])
     qmlRegisterType<Rauc>("Phytec.Rauc", 1, 0, "Rauc");
     // qmlRegisterType<CameraDemo>("Phytec.CameraDemo", 1, 0, "CameraDemo");
     
-    qmlRegisterSingletonType<CameraDemo>("Phytec.CameraDemo", 1, 0, "CameraDemo",
-                                         CameraDemo::singletontypeProvider);
+    // qmlRegisterSingletonType<CameraDemo>("Phytec.CameraDemo", 1, 0, "CameraDemo",
+    //                                      CameraDemo::singletontypeProvider);
 
     QQmlApplicationEngine engine;
 

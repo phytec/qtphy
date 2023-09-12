@@ -4,11 +4,12 @@
  */
 
 import QtQuick 2.0
-import QtQuick.Controls 2.0
+import QtQuick.Dialogs
+import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.0
 import PhyTheme 1.0
 import QtMultimedia
-import Phytec.CameraDemo 1.0
+// import Phytec.CameraDemo 1.0
 import "../controls"
 
 // import org.freedesktop.gstreamer.Qt6GLVideoItem 1.0
@@ -36,9 +37,43 @@ Page {
             Layout.fillWidth: false
             Layout.preferredWidth: parent.width * 0.7
 
+            MessageDialog {
+                id: errorDialog1
+                visible: (camDemoMain.errorDialog == 1) ? true : false
+
+                text: "Cannot open Camera!"
+                informativeText: "Seems like a camera is connected but the wrong devicetree overlays have been selected.\n" +
+                "The detectCamera script recommends the following devicetree overlays:\n\n" + camDemoMain.recommendedOverlays + "\n\n" +
+                "Do you want to load these overlays and reboot?"
+                buttons: MessageDialog.Ok | MessageDialog.Cancel
+                onAccepted: camDemoMain.reloadOverlays()
+            }
+
+            MessageDialog {
+                id: errorDialog2
+                visible: (camDemoMain.errorDialog == 2) ? true : false
+
+                text: "Cannot open Camera!"
+                informativeText: "Looks like you have a phyCam-L connected. Please add the correct overlay for your camera to /boot/bootenv.txt\n" +
+                "Replace YOUR_CAMERA with your camera mdoel (vm016 / vm017 / vm020) and YOUR_FPDLINK_PORT with the port that the coax cable is connected to (port0 / port1)"
+                buttons: MessageDialog.Ok
+                // onAccepted: 
+            }
+
+
+            MessageDialog {
+                id: errorDialog3
+                visible: (camDemoMain.errorDialog == 3) ? true : false
+
+                text: "No Camera Found!"
+                informativeText: "No camera found on the CSI interfaces of the board!"
+                buttons: MessageDialog.Ok
+                // onAccepted: 
+            }
+
+           
             Image {
                 id: streamImage
-                // anchors.fill: parent // TBD: change
                 Layout.fillHeight: true
                 Layout.fillWidth: true
                 fillMode: Image.PreserveAspectFit
@@ -78,6 +113,7 @@ Page {
                     text: "(Re)-Open"
                     onClicked: {
                         camDemoMain.openCamera()
+                        // notFoundDialog1.open()
                     }
                 }
             }
@@ -90,6 +126,17 @@ Page {
                 Label {
                     id: cameraNameLabel
                     text: camDemoMain.cameraName
+                }
+            }
+
+            // Interface
+            Row {
+                Label {
+                    text: "Interface: "
+                }
+                Label {
+                    id: interfaceLabel
+                    text: camDemoMain.interface
                 }
             }
 
@@ -111,19 +158,19 @@ Page {
                 }
                 Label {
                     id: formatLabel
-                    text: "TBD !!!"
+                    text: camDemoMain.format
                 }
             }
 
-            // Lens
-            Label {
-                text: "Lens: TBD"
-                enabled: false
-            }
-            ComboBox {
-                id: lensComboBox
-                model: ["DEFAULT", "Lens 1", "Lens 2", "Lens 3"]
-                enabled: false
+            // Video SRC (ISP / ISI)
+            Row {
+                Label {
+                    text: "Video Source: "
+                }
+                Label {
+                    id: videoSrcLabel
+                    text: camDemoMain.videoSrc
+                }
             }
 
             // Horizontal Flip
@@ -163,10 +210,10 @@ Page {
             }
             Slider {
                 id: exposureSlider
-                enabled: !autoExposureCheckbox.checked
+                enabled: !(autoExposureCheckbox.checked || aecCheckbox.checked)
                 from: 0
                 value: camDemoMain.exposure
-                to: 1000
+                to: 1500
                 // to: 65535 // TBD: this is the original maximum but it is way too high
                 // maybe orient on auto_exposure_max
                 // step = 1
@@ -175,26 +222,79 @@ Page {
                 }
             }
 
-            // Dewarping (TBD)
-            CheckBox {
-                id: dewarpingCheckbox
-                text: "Dewarping"
-                enabled: false
+            // // Lens
+            // Label {
+            //     text: "Lens:"
+            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
+            // }
+            // ComboBox {
+            //     id: lensComboBox
+            //     model: ["DEFAULT", "Lens 1", "Lens 2", "Lens 3"]
+            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
+            // }
+
+            // // Dewarping (TBD)
+            // CheckBox {
+            //     id: dweCheckbox
+            //     text: "Dewarping"
+            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
+            //     checked: camDemoMain.dwe
+            //     onClicked: {
+            //         camDemoMain.setDwe(dweCheckbox.checked)
+            //     }
+            // }
+
+            Label {
+                text: "ISP Controls: "
             }
 
-            // Auto Gain (TBD)
+            // Auto Exposure (ISP)
             CheckBox {
-                id: autoGainCheckbox
-                text: "Auto Gain (analog)"
-                enabled: false
+                id: aecCheckbox
+                text: "ISP Auto Exposure"
+                enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
+                checked: camDemoMain.aec
+                onClicked: {
+                    camDemoMain.setAec(aecCheckbox.checked)
+                }
             }
 
-            // Black Level Correction (TBD)
+            // Auto White Balance (TBD)
             CheckBox {
-                id: blackLevelCorrectionCheckbox
-                text: "Black Level Correction"
-                enabled: false
+                id: awbCheckbox
+                text: "Auto White Balance"
+                enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
+                checked: camDemoMain.awb
+                onClicked: {
+                    camDemoMain.setAwb(awbCheckbox.checked)
+                }
             }
+
+            // Lens Shading Correction (TBD)
+            CheckBox {
+                id: lscCheckbox
+                text: "Lens Shading Correction"
+                enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
+                checked: camDemoMain.lsc
+                onClicked: {
+                    camDemoMain.setLsc(lscCheckbox.checked)
+                }
+            }
+            
+
+            // // Auto Gain (TBD)
+            // CheckBox {
+            //     id: autoGainCheckbox
+            //     text: "Auto Gain (analog)"
+            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
+            // }
+
+            // // Black Level Correction (TBD)
+            // CheckBox {
+            //     id: blackLevelCorrectionCheckbox
+            //     text: "Black Level Correction"
+            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
+            // }
         }
     }
 }
