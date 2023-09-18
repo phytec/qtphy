@@ -39,7 +39,7 @@ Page {
 
             MessageDialog {
                 id: errorDialog1
-                visible: (camDemoMain.errorDialog == 1) ? true : false
+                visible: (camDemoMain.errorDialog == 0) ? true : false
 
                 text: "Cannot open Camera!"
                 informativeText: "Seems like a camera is connected but the wrong devicetree overlays have been selected.\n" +
@@ -50,20 +50,8 @@ Page {
             }
 
             MessageDialog {
-                id: errorDialog2
-                visible: (camDemoMain.errorDialog == 2) ? true : false
-
-                text: "Cannot open Camera!"
-                informativeText: "Looks like you have a phyCam-L connected. Please add the correct overlay for your camera to /boot/bootenv.txt\n" +
-                "Replace YOUR_CAMERA with your camera mdoel (vm016 / vm017 / vm020) and YOUR_FPDLINK_PORT with the port that the coax cable is connected to (port0 / port1)"
-                buttons: MessageDialog.Ok
-                // onAccepted: 
-            }
-
-
-            MessageDialog {
                 id: errorDialog3
-                visible: (camDemoMain.errorDialog == 3) ? true : false
+                visible: (camDemoMain.errorDialog == 1) ? true : false
 
                 text: "No Camera Found!"
                 informativeText: "No camera found on the CSI interfaces of the board!"
@@ -107,7 +95,7 @@ Page {
             // spacing: PhyTheme.marginBig
 
             // Open Camera Button
-            Row {
+            RowLayout {
                 Button {
                     id: startButton
                     text: "(Re)-Open"
@@ -115,6 +103,25 @@ Page {
                         camDemoMain.openCamera()
                         // notFoundDialog1.open()
                     }
+                    Layout.rightMargin: 10
+                    Layout.alignment: Qt.AlignVCenter
+                }
+                Label {
+                    text: "ISP"
+                    Layout.alignment: Qt.AlignVCenter
+                }
+                Switch {
+                    id: videoSourceSwitch
+                    checked: false
+
+                    onCheckedChanged: {
+                        camDemoMain.setVideoSource(checked)                        
+                    }
+                    Layout.alignment: Qt.AlignVCenter
+                }
+                Label {
+                    text: "ISI"
+                    Layout.alignment: Qt.AlignVCenter
                 }
             }
 
@@ -197,7 +204,8 @@ Page {
             CheckBox {
                 id: autoExposureCheckbox
                 text: "Auto Exposure"
-                // checkState: cameraDemo.autoExposure
+                // TBD: separate cameraname and sensor
+                enabled: (camDemoMain.videoSrc == "ISP" || camDemoMain.cameraName == "VM017 (ar0521)") ? 0 : 1; // disable if ISP is used or vm017 is connected
                 checked: camDemoMain.autoExposure
                 onClicked: {
                     camDemoMain.setAutoExposure(autoExposureCheckbox.checked)
@@ -253,7 +261,7 @@ Page {
                 id: aecCheckbox
                 text: "ISP Auto Exposure"
                 enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-                checked: camDemoMain.aec
+                checked: (camDemoMain.videoSrc == "ISP") ? true : false
                 onClicked: {
                     camDemoMain.setAec(aecCheckbox.checked)
                 }
@@ -264,7 +272,7 @@ Page {
                 id: awbCheckbox
                 text: "Auto White Balance"
                 enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-                checked: camDemoMain.awb
+                checked: (camDemoMain.videoSrc == "ISP") ? true : false
                 onClicked: {
                     camDemoMain.setAwb(awbCheckbox.checked)
                 }
@@ -275,7 +283,7 @@ Page {
                 id: lscCheckbox
                 text: "Lens Shading Correction"
                 enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-                checked: camDemoMain.lsc
+                checked: (camDemoMain.videoSrc == "ISP") ? true : false
                 onClicked: {
                     camDemoMain.setLsc(lscCheckbox.checked)
                 }

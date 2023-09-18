@@ -33,6 +33,28 @@ using json = nlohmann::json;
 
 enum video_srcs{ISP, ISI};
 
+struct camera {
+    std::string device =  ""; // /dev/cam-csi1-port0   (CAM)
+    int device_fd = -1; // file descriptor of device (subdevFd)
+
+    std::string interface = "";
+    std::string sensor = "";
+    std::string framesize = "";
+    std::string format = "";
+    video_srcs video_src = ISP;
+
+    std::string v4l_subdev = ""; // (v4l_subdev in getSensor())
+    std::string pipeline_command = "";
+
+    
+
+
+
+    // std::string vd = ""; // video device (e.g. /dev/video-isp-csi1)
+
+    
+};
+
 // class IspJson {
 // public:
 //     bool isInitialized = 0;
@@ -129,7 +151,6 @@ class OpencvImageProvider : public QQuickImageProvider
 public:
     OpencvImageProvider();
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override;
-    // QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override;
 
     ~OpencvImageProvider()
     {
@@ -177,19 +198,7 @@ class CameraDemo : public QObject
     Q_PROPERTY(int exposure // Exposure
                    READ getExposure
                        NOTIFY exposureChanged);
-    Q_PROPERTY(bool dwe // ISP Dewarp Engine
-                   READ getDwe
-                       NOTIFY dweChanged);
-    Q_PROPERTY(bool awb // ISP Auto White Balancing
-                   READ getAwb
-                       NOTIFY awbChanged);
-    Q_PROPERTY(bool lsc // ISP Lens Shading Correction
-                   READ getLsc
-                       NOTIFY lscChanged);
-    Q_PROPERTY(bool aec // ISP Auto Exposure
-                   READ getAec
-                       NOTIFY aecChanged);
-
+                       
     Q_PROPERTY(QString recommendedOverlays // Recommended overlays
                    READ getRecommendedOverlays
                        NOTIFY recommendedOverlaysChanged);
@@ -199,7 +208,6 @@ class CameraDemo : public QObject
                     NOTIFY errorDialogChanged);
 
 public:
-
     CameraDemo(QObject *parent = nullptr);
     static QObject *singletontypeProvider(QQmlEngine *engine, QJSEngine *scriptEngine);
     ~CameraDemo();
@@ -218,11 +226,11 @@ private:
     std::string FORMAT;
     video_srcs VIDEO_SRC = ISI;
 
-    std::string vd = "";
+    // std::string vd = "";
     int vd_fd = -1;
     int tmp = 0;
 
-    int ERROR = 0;
+    int ERROR = -1;
     QString RECOMMENDED_OVERLAYS = "";
 
     int getSensor(); // get Sensor and Framesize
@@ -233,9 +241,6 @@ private:
     int streamid = 0;
     int isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse);
     int isp_read_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse);
-
-
-
 
 signals:
     void newImage(QImage &);
@@ -251,11 +256,6 @@ signals:
     void recommendedOverlaysChanged();
     void errorDialogChanged();
 
-    void dweChanged();
-    void awbChanged();
-    void lscChanged();
-    void aecChanged();
-
 public slots:
     void openCamera();
     QString getCameraName() const;
@@ -268,10 +268,6 @@ public slots:
     bool getAutoExposure();
     bool getFlipHorizontal();
     bool getFlipVertical();
-    bool getDwe();
-    bool getAwb();
-    bool getLsc();
-    bool getAec();
 
     int getExposure();
 
@@ -282,6 +278,8 @@ public slots:
     void setFlipVertical(bool value);
     void setFlipHorizontal(bool value);
     void setExposure(int value);
+
+    void setVideoSource(video_srcs value);
 
     void setDwe(bool value);
     void setAwb(bool value);

@@ -34,7 +34,6 @@
 #include "json.hpp"
 using json = nlohmann::json;
 
-// TBD
 // If on ISI: execute setup-pipeline-csi1
 // Else if on ISP: complete the pipeline manually
 
@@ -59,6 +58,8 @@ CameraDemo::~CameraDemo()
     close(subdevFd);
     cap.release();
     tUpdate.stop();
+
+    // close(vd); // TBD: might throw error if not opened
 }
 
 int CameraDemo::getCAM()
@@ -79,9 +80,6 @@ int CameraDemo::getCAM()
         CAM = "/dev/cam-csi1-port1";
         return 1;
     }
-
-    // TBD: allow switching between csi1 and csi2
-
     // CSI2
     else if (access("/dev/cam-csi2", F_OK) == 0)
     { // phycam-M on csi-2
@@ -106,18 +104,16 @@ int CameraDemo::getCAM()
 
 int CameraDemo::getSensor()
 {
-    char v4l_subdev[PATH_MAX];
-    ssize_t len = readlink(CAM.c_str(), v4l_subdev, sizeof(v4l_subdev) - 1);
+    char buffer[PATH_MAX];
+    ssize_t len = readlink(CAM.c_str(), buffer, sizeof(buffer) - 1);
     if (len != -1)
     {
-        v4l_subdev[len] = '\0';
+        std::cerr << "ERROR: Could not read link" << std::endl;
+
+        buffer[len] = '\0';
         std::string entityPath = "/sys/class/video4linux/";
-        entityPath += v4l_subdev;
-        entityPath += "/device/name";
-
-
-        std::cout << entityPath << std::endl;
-
+        entityPath += buffer;
+        entityPath += "/name";
         std::ifstream entityFile(entityPath);
         std::string entity;
         if (entityFile.is_open())
@@ -125,12 +121,11 @@ int CameraDemo::getSensor()
             std::getline(entityFile, entity);
             entityFile.close();
         }
-        std::cout << entity << std::endl;
-        std::string sensor = entity;
-
+        std::istringstream iss(entity);
+        std::string firstToken;
+        iss >> firstToken;
         // TBD: GET COLOR FORMAT
-
-        if (sensor == "ar0144")
+        if (firstToken == "ar0144")
         {
             // std::string CAM_BW_FMT = "Y8_1X8";
             // std::string CAM_COL_FMT = "SGRBG8_1X8";
@@ -138,17 +133,16 @@ int CameraDemo::getSensor()
             // std::string OFFSET_SENSOR = "(0,4)";
             SENSOR = "ar0144";
             FRAMESIZE = "width=1280, height=800";
-
-            // TBD: variables for setup-pipeline script
             return 0;
         }
-        else if (sensor == "ar0521")
+        else if (firstToken == "ar0521")
         {
             // std::string CAM_BW_FMT = "Y8_1X8";
             // std::string CAM_COL_FMT = "SGRBG8_1X8";
             // std::string SENSOR_RES = "2592x1944";
             // std::string OFFSET_SENSOR = "(0,0)";
             SENSOR = "ar0521";
+            // FRAMESIZE = "width=2592, height=1944";
             FRAMESIZE = "width=1280, height=720";
             return 1;
         }
@@ -431,16 +425,21 @@ void CameraDemo::openCamera()
     if (getCAM() == -1)
     {
         std::cerr << "ERROR: NO CAMERA FOUND" << std::endl;
-
+        // execute detectCamera Script and open Error MessageBox
         QProcess process;
-        QStringList arguments;
-        arguments << "/root/detectCamera.sh" << "-m";
 
-        process.start("/bin/sh", arguments);
+        process.start("/root/detectCamera.sh");
         process.waitForFinished(-1); // Warten, bis das Skript beendet ist
 
+        // Ausgabe abrufen
         QString output = process.readAllStandardOutput();
+        // QString errorOutput = process.readAllStandardError();
+
+        // Rückgabewert abrufen
         int returnCode = process.exitCode();
+
+        QString toRemove = "\nTry loading the following overlays by adding them to /boot/bootenv.txt and reboot\n";
+        output.remove(toRemove);
 
         RECOMMENDED_OVERLAYS = output;
 
@@ -450,12 +449,10 @@ void CameraDemo::openCamera()
         return;
     }
 
-    // array of camera structs:
-    // for each camera:
-
     subdevFd = open(CAM.c_str(), O_RDWR);
     if (subdevFd < 0)
     {
+        // qCritical() << "Error: Could not open subdev";
         std::cerr << "ERROR: could not open subdev" << std::endl;
         return;
     }
@@ -467,23 +464,46 @@ void CameraDemo::openCamera()
         return;
     }
 
-
-    std::string vd = "";
-    std::string pipeline_command = "";
-
-
     // GET SUBDEVICE AND INTERFACE
-    if (CAM == "/dev/cam-csi1" || CAM == "/dev/cam-csi1-port0" || CAM == "/dev/cam-csi1-port1")
+    if (CAM == "/dev/cam-csi1" || CAM == "/dev/cam-csi1-port0")
     {
         INTERFACE = "CSI1";
-        vd = "/dev/video-isp-csi1";
-        pipeline_command = "/usr/bin/setup-pipeline-csi1";
+        vd = "/dev/video-csi1";
+        if (system("/usr/bin/setup-pipeline-csi1") != 0) // call setup-pipeline script
+        {
+            std::cerr << "ERROR: setup-pipeline-csi1 failed" << std::endl;
+            return;
+        }
     }
-    else if (CAM == "/dev/cam-csi2" || CAM == "/dev/cam-csi2-port0" || CAM == "/dev/cam-csi2-port1")
+    else if (CAM == "/dev/cam-csi1-port1")
+    {
+        INTERFACE = "CSI1, PORT 1";
+        vd = "/dev/video-csi1";
+        if (system("/usr/bin/setup-pipeline-csi1 -p 1") != 0) // call setup-pipeline script with port 1
+        {
+            std::cerr << "ERROR: setup-pipeline-csi1 failed" << std::endl;
+            return;
+        }
+    }
+    else if (CAM == "/dev/cam-csi2" || CAM == "/dev/cam-csi2-port0")
     {
         INTERFACE = "CSI2";
-        vd = "/dev/video-isp-csi2";
-        pipeline_command = "/usr/bin/setup-pipeline-csi2";
+        vd = "/dev/video-csi2";
+        if (system("/usr/bin/setup-pipeline-csi2") != 0) // call setup-pipeline script
+        {
+            std::cerr << "ERROR: setup-pipeline-csi2 failed" << std::endl;
+            return;
+        }
+    }
+    else if (CAM == "/dev/cam-csi2-port1")
+    {
+        INTERFACE = "CSI2, PORT 1";
+        vd = "/dev/video-csi2";
+        if (system("/usr/bin/setup-pipeline-csi2 -p 1") != 0) // call setup-pipeline script
+        {
+            std::cerr << "ERROR: setup-pipeline-csi2 failed" << std::endl;
+            return;
+        }
     }
     else // No camera found
     {
@@ -491,61 +511,47 @@ void CameraDemo::openCamera()
         INTERFACE = "NO CAMERA FOUND";
         return;
     }
+    // emit interfaceChanged();
 
-    // If camera is on fpdlink port 1
-    if (CAM == "/dev/cam-csi1-port1" || CAM == "/dev/cam-csi2-port1") 
-    {
-        pipeline_command += " -p 1";
-        INTERFACE += ", PORT 1";
-    }
-        
-    // TBD: modify for VM-020 (do not get full resolution (configure downscale))
-    if (SENSOR == "ar0521")
-    {
-        // FRAMESIZE = "width=1280, height=720"; // TBD: set sensor to 2560 * 1440 
-        // -> setup-pipeline script -c 2560x1440 -s 1280x720 -o "(16,252)"
-        pipeline_command += " -c 2560x1440 -s 1280x720 -o \"(16,252)\"";
-    }
-    std::cout << "pipeline command: " << pipeline_command << std::endl;
-    if (system(pipeline_command.c_str()) != 0) // call setup-pipeline script
-    {
-        std::cerr << "ERROR: setup-pipeline failed" << std::endl;
-        return;
-    }
 
+    // TBD: equivalent for isp-csi2
     // CHECK ISI / ISP, SET FORMAT AND VIDEO_SRC
-    if (access("/dev/isp-csi1", F_OK) == 0 || access("/dev/isp-csi2", F_OK) == 0) // ISP is used
+    if (access("/dev/isp-csi1", F_OK) == 0) // ISP is used
     {
         FORMAT = "video/x-raw,format=YUY2"; // set format to YUY2
         VIDEO_SRC = ISP;
-
-        // Initalize ISP (open file descriptor, that is used to set ISP ctrls.)
-        // TBD: maybe move this away
-        vd_fd = open(vd.c_str(), O_RDWR | O_NONBLOCK, 0);
-        if (vd_fd == -1) {
-            std::cerr << "Failed to open video device" << std::endl;
-            return;
-        }
-
-        // turn off V4L2 auto exposure (ISP auto exposure is used)
-        setAutoExposure(0);
     }
     else // ISI is used
     {
         FORMAT = "video/x-bayer,format=grbg"; // set format to grbg
         VIDEO_SRC = ISI;
     }
+    // emit videoSrcChanged();
+    // emit formatChanged();
 
     // TBD: What if I use bayer2rgbneon to to bayer conversion with gstreamer instead of opencv
-    // -> bayer2rgbneon outputs a special rgb color format, that opencv appsink cannot read -> special appsink would be needed
-        // std::string pipeline = "v4l2src device=" + vd + " ! " + FORMAT + ", " + FRAMESIZE + " ! bayer2rgbneon ! queue ! appsink";        
-        
-    // generate gstreamer pipeline
-    std::string pipeline = "v4l2src device=" + vd + " ! " + FORMAT + ", " + FRAMESIZE + " ! appsink";
+    // std::string pipeline = "v4l2src vd=" + vd + " ! " + FORMAT + ", " + FRAMESIZE + " ! bayer2rgbneon ! queue ! appsink";
+    std::string pipeline = "v4l2src vd=" + vd + " ! " + FORMAT + ", " + FRAMESIZE + " ! appsink";
     qDebug() << "pipeline: " << pipeline.c_str();
 
 
-    // Emit signals to update GUI
+    // init ISP
+    if (VIDEO_SRC == ISP)
+    {
+        vd_fd = open(vd.c_str(), O_RDWR | O_NONBLOCK, 0);
+        if (vd_fd == -1) {
+            std::cerr << "Failed to open video device" << std::endl;
+            return;
+        }
+
+        setAutoExposure(0);
+    }
+
+
+
+    // Rufen Sie Ihre Funktion toggle_features auf, um sie in Ihrem Projekt zu implementieren.
+    // Stellen Sie sicher, dass Sie die erforderlichen Argumente wie waittime, red, green, blue usw. an Ihre Funktion übergeben.
+
     emit framesizeChanged();
     emit sensorChanged();
     emit autoExosureChanged();
@@ -581,80 +587,64 @@ void CameraDemo::updateFrame()
     }
 }
 
-void CameraDemo::setVideoSource(video_srcs value)
-{
-    std::cout << value << std::endl;
-    if (value == ISP) {
-        std::cout << "ISP" << std::endl;
-    }
-    else if (value == ISI) {
-        std::cout << "ISI" << std::endl;
-    }
-}
-
-
 void CameraDemo::reloadOverlays()
 {
-    std::string command = "/root/detectCamera.sh -s \"" + RECOMMENDED_OVERLAYS.toStdString() + "\"";
+    const char* substringsToRemove[] = {
+        " imx8mp-isi-csi1.dtbo",
+        " imx8mp-isi-csi2.dtbo",
+        " imx8mp-isp-csi1.dtbo",
+        " imx8mp-isp-csi2.dtbo",
+        " imx8mp-vm016-csi1-fpdlink-port0.dtbo",
+        " imx8mp-vm016-csi1-fpdlink-port1.dtbo",
+        " imx8mp-vm016-csi1.dtbo",
+        " imx8mp-vm016-csi2-fpdlink-port0.dtbo",
+        " imx8mp-vm016-csi2-fpdlink-port1.dtbo",
+        " imx8mp-vm016-csi2.dtbo",
+        " imx8mp-vm017-csi1-fpdlink-port0.dtbo",
+        " imx8mp-vm017-csi1-fpdlink-port1.dtbo",
+        " imx8mp-vm017-csi1.dtbo",
+        " imx8mp-vm017-csi2-fpdlink-port0.dtbo",
+        " imx8mp-vm017-csi2-fpdlink-port1.dtbo",
+        " imx8mp-vm017-csi2.dtbo",
+        " imx8mp-vm020-csi1.dtbo",
+        " imx8mp-vm020-csi2.dtbo"
+    };
+    const char* filename = "/boot/bootenv.txt";
 
-    std::cout << command << std::endl;
-    system(command.c_str());
-    // const char* substringsToRemove[] = {
-    //     " imx8mp-isi-csi1.dtbo",
-    //     " imx8mp-isi-csi2.dtbo",
-    //     " imx8mp-isp-csi1.dtbo",
-    //     " imx8mp-isp-csi2.dtbo",
-    //     " imx8mp-vm016-csi1-fpdlink-port0.dtbo",
-    //     " imx8mp-vm016-csi1-fpdlink-port1.dtbo",
-    //     " imx8mp-vm016-csi1.dtbo",
-    //     " imx8mp-vm016-csi2-fpdlink-port0.dtbo",
-    //     " imx8mp-vm016-csi2-fpdlink-port1.dtbo",
-    //     " imx8mp-vm016-csi2.dtbo",
-    //     " imx8mp-vm017-csi1-fpdlink-port0.dtbo",
-    //     " imx8mp-vm017-csi1-fpdlink-port1.dtbo",
-    //     " imx8mp-vm017-csi1.dtbo",
-    //     " imx8mp-vm017-csi2-fpdlink-port0.dtbo",
-    //     " imx8mp-vm017-csi2-fpdlink-port1.dtbo",
-    //     " imx8mp-vm017-csi2.dtbo",
-    //     " imx8mp-vm020-csi1.dtbo",
-    //     " imx8mp-vm020-csi2.dtbo"
-    // };
-    // const char* filename = "/boot/bootenv.txt";
+    for (int i = 0; i < 18; i++) {
+        std::string sed_command = "sed -i 's/";
+        sed_command += substringsToRemove[i];
+        sed_command += "/";
+        // sed_command += replacement_string;
+        sed_command += "/g' ";
+        sed_command += filename;
 
-    // for (int i = 0; i < 18; i++) {
-    //     std::string sed_command = "sed -i 's/";
-    //     sed_command += substringsToRemove[i];
-    //     sed_command += "/";
-    //     // sed_command += replacement_string;
-    //     sed_command += "/g' ";
-    //     sed_command += filename;
+        int exit_code = system(sed_command.c_str());
 
-    //     int exit_code = system(sed_command.c_str());
+        if (exit_code < 0)
+        {
+            std::cerr << "Error modifying /boot/bootenv.txt" << std::endl;
+            return;
+        }
+    }
 
-    //     if (exit_code < 0)
-    //     {
-    //         std::cerr << "Error modifying /boot/bootenv.txt" << std::endl;
-    //         return;
-    //     }
-    // }
+    std::ofstream file(filename, std::ios::app); // open file in append mode
+    if (!file) {
+        std::cerr << "Error opening /boot/bootenv.txt" << std::endl;
+        return;
+    }
 
-    // std::ofstream file(filename, std::ios::app); // open file in append mode
-    // if (!file) {
-    //     std::cerr << "Error opening /boot/bootenv.txt" << std::endl;
-    //     return;
-    // }
+    qDebug() << RECOMMENDED_OVERLAYS;
+    std::string overlays = RECOMMENDED_OVERLAYS.toStdString();
+    overlays.pop_back(); // remove last \n
+    overlays = overlays.substr(overlays.find_last_of('\n')+1);
 
-    // qDebug() << RECOMMENDED_OVERLAYS;
-    // std::string overlays = RECOMMENDED_OVERLAYS.toStdString();
-    // overlays.pop_back(); // remove last \n
-    // overlays = overlays.substr(overlays.find_last_of('\n')+1);
+    qDebug() << QString::fromStdString(overlays);
 
-    // qDebug() << QString::fromStdString(overlays);
+    file << " " << overlays; // append overlays to bootenv.txt
+    file.close();
 
-    // file << " " << overlays; // append overlays to bootenv.txt
-    // file.close();
-
-    // system("reboot now");
+    system("reboot now");
 }
 
 OpencvImageProvider::OpencvImageProvider()
