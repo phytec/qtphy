@@ -39,7 +39,7 @@ Page {
 
             MessageDialog {
                 id: errorDialog1
-                visible: (camDemoMain.errorDialog == 0) ? true : false
+                visible: (camDemoMain.status == 3) ? true : false
 
                 text: "Cannot open Camera!"
                 informativeText: "Seems like a camera is connected but the wrong devicetree overlays have been selected.\n" +
@@ -50,8 +50,8 @@ Page {
             }
 
             MessageDialog {
-                id: errorDialog3
-                visible: (camDemoMain.errorDialog == 1) ? true : false
+                id: errorDialog2
+                visible: (camDemoMain.status == 2) ? true : false
 
                 text: "No Camera Found!"
                 informativeText: "No camera found on the CSI interfaces of the board!"
@@ -95,32 +95,53 @@ Page {
             // spacing: PhyTheme.marginBig
 
             // Open Camera Button
-            RowLayout {
-                Button {
-                    id: startButton
-                    text: "(Re)-Open"
-                    onClicked: {
-                        camDemoMain.openCamera()
-                        // notFoundDialog1.open()
-                    }
-                    Layout.rightMargin: 10
-                    Layout.alignment: Qt.AlignVCenter
+            Button {
+                id: startButton
+                text: "(Re)-Open"
+                onClicked: {
+                    camDemoMain.openCamera()
+                    // notFoundDialog1.open()
                 }
+                Layout.rightMargin: 10
+                Layout.alignment: Qt.AlignVCenter
+            }
+            RowLayout {
                 Label {
                     text: "ISP"
                     Layout.alignment: Qt.AlignVCenter
                 }
                 Switch {
                     id: videoSourceSwitch
-                    checked: false
+                    checked: camDemoMain.videoSrc
 
                     onCheckedChanged: {
-                        camDemoMain.setVideoSource(checked)                        
+                        camDemoMain.setVideoSource(checked)
                     }
                     Layout.alignment: Qt.AlignVCenter
                 }
                 Label {
                     text: "ISI"
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.rightMargin: 10
+                }
+                
+                
+                Label {
+                    text: "CSI1"
+                    Layout.alignment: Qt.AlignVCenter
+                }
+                Switch {
+                    id: interfaceSwitch
+                    checked: (camDemoMain.interface == 2) ? 1 : 0// TBD enum
+                    enabled: (camDemoMain.status == 1) ? 1 : 0 // TBD enum
+
+                    onCheckedChanged: {
+                        camDemoMain.setInterface(checked)
+                    }
+                    Layout.alignment: Qt.AlignVCenter
+                }
+                Label {
+                    text: "CSI2"
                     Layout.alignment: Qt.AlignVCenter
                 }
             }
@@ -143,7 +164,7 @@ Page {
                 }
                 Label {
                     id: interfaceLabel
-                    text: camDemoMain.interface
+                    text: camDemoMain.interfaceString
                 }
             }
 
@@ -169,16 +190,16 @@ Page {
                 }
             }
 
-            // Video SRC (ISP / ISI)
-            Row {
-                Label {
-                    text: "Video Source: "
-                }
-                Label {
-                    id: videoSrcLabel
-                    text: camDemoMain.videoSrc
-                }
-            }
+            // // Video SRC (ISP / ISI)
+            // Row {
+            //     Label {
+            //         text: "Video Source: "
+            //     }
+            //     Label {
+            //         id: videoSrcLabel
+            //         text: camDemoMain.videoSrc
+            //     }
+            // }
 
             // Horizontal Flip
             CheckBox {
@@ -205,8 +226,8 @@ Page {
                 id: autoExposureCheckbox
                 text: "Auto Exposure"
                 // TBD: separate cameraname and sensor
-                enabled: (camDemoMain.videoSrc == "ISP" || camDemoMain.cameraName == "VM017 (ar0521)") ? 0 : 1; // disable if ISP is used or vm017 is connected
-                checked: camDemoMain.autoExposure
+                enabled: (!videoSourceSwitch.checked) ? 0 : 1; // TBD: disable if camera has no auto exposure
+                checked: (videoSourceSwitch.checked  && camDemoMain.autoExposure) ? 1 : 0;
                 onClicked: {
                     camDemoMain.setAutoExposure(autoExposureCheckbox.checked)
                 }
@@ -260,8 +281,8 @@ Page {
             CheckBox {
                 id: aecCheckbox
                 text: "ISP Auto Exposure"
-                enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-                checked: (camDemoMain.videoSrc == "ISP") ? true : false
+                enabled: (camDemoMain.videoSrc==0)  ? true : false
+                checked: (camDemoMain.videoSrc == 0) ? true : false
                 onClicked: {
                     camDemoMain.setAec(aecCheckbox.checked)
                 }
@@ -271,8 +292,8 @@ Page {
             CheckBox {
                 id: awbCheckbox
                 text: "Auto White Balance"
-                enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-                checked: (camDemoMain.videoSrc == "ISP") ? true : false
+                enabled: (camDemoMain.videoSrc==0)  ? true : false
+                checked: (camDemoMain.videoSrc == 0) ? true : false
                 onClicked: {
                     camDemoMain.setAwb(awbCheckbox.checked)
                 }
@@ -282,8 +303,8 @@ Page {
             CheckBox {
                 id: lscCheckbox
                 text: "Lens Shading Correction"
-                enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-                checked: (camDemoMain.videoSrc == "ISP") ? true : false
+                enabled: (camDemoMain.videoSrc==0)  ? true : false
+                checked: (camDemoMain.videoSrc == 0) ? true : false
                 onClicked: {
                     camDemoMain.setLsc(lscCheckbox.checked)
                 }

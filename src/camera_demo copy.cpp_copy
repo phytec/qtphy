@@ -58,7 +58,7 @@ Sensor SENSORS[] = {
 };
 
 
-CameraDemo::CameraDemo(QObject *parent) : QObject(parent), cam1(1), cam2(2)
+CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
 {
     qDebug() << "CameraDemo constructor";
     connect(&tUpdate, &QTimer::timeout, this, &CameraDemo::updateFrame);
@@ -71,8 +71,10 @@ CameraDemo::~CameraDemo()
     tUpdate.stop();
 }
 
-PhyCam::PhyCam(int _interface) : csi_interface(_interface)
+int camera::init(int _interface)
 {
+    csi_interface = _interface;
+
     device = "/dev/cam-csi" + std::to_string(csi_interface);
     if (access(device.c_str(), F_OK) == 0)
     { // phycam-M on csi-1
@@ -92,8 +94,9 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
     {
         // TBD: no camera found
         status = UNCONNECTED;
-        return;
+        return -1;
     }
+
 
     if ((access(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0) || 
         (access(("/dev/video-isi-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0))
@@ -101,7 +104,7 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
         // TBD: wrong overlays
         // please load isi and isp overlay
         status = UNCONNECTED;
-        return;
+        return -1;
     }
 
     device_fd = open(device.c_str(), O_RDWR);
@@ -109,7 +112,7 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
     {
         std::cerr << "ERROR: could not open device fd" << std::endl;
         status = ERROR;
-        return;
+        return -1;
     }
 
     isp_fd = open(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), O_RDWR | O_NONBLOCK, 0);
@@ -117,7 +120,7 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
     {
         std::cerr << "ERROR: could not open isp fd" << std::endl;
         status = ERROR;
-        return;
+        return -1;
     }
     
     // get sensor of connected camera (includes framesize etc.)
@@ -125,7 +128,7 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
     {
         // Failed to get sensor
         status = ERROR;
-        return;
+        return -1;
     }
 
     // construct setup_pipeline_command
@@ -142,13 +145,13 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
     // construct pipelines:
     std::string framesize = "width=" + std::to_string(sensor->frame_width) + ", height=" + std::to_string(sensor->frame_height);
     isp_pipeline = "v4l2src device=/dev/video-isp-csi" + std::to_string(csi_interface) + " ! video/x-raw,format=YUY2, " + framesize + " ! appsink";
-    isi_pipeline = "v4l2src device=/dev/video-isi-csi" + std::to_string(csi_interface) + " ! video/x-bayer,format=grbg, " + framesize + " ! appsink";
+    isi_pipeline = "v4l2src device=/dev/video-isp-csi" + std::to_string(csi_interface) + " ! video/x-bayer,format=grbg, " + framesize + " ! appsink";
 
     status = READY;
+    return 0;
 }
 
-
-void PhyCam::stream(video_srcs vid_src)
+void camera::stream(video_srcs vid_src)
 {
     if (setup_pipeline() != 0) {
         std::cerr << "ERROR: setup-pipeline failed" << std::endl;
@@ -156,13 +159,13 @@ void PhyCam::stream(video_srcs vid_src)
     }
 }
 
-int PhyCam::setup_pipeline()
+int camera::setup_pipeline()
 {
     return system(setup_pipeline_command.c_str());
 }
 
 
-int PhyCam::getSensor()
+int camera::getSensor()
 {
     char v4l_subdev[PATH_MAX];
     ssize_t len = readlink(device.c_str(), v4l_subdev, sizeof(v4l_subdev) - 1);
@@ -206,8 +209,8 @@ int PhyCam::getSensor()
 
 
 int CameraDemo::isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse) {
-    if (CAM->isp_fd < 0) {
-        std::cerr << "isp file descriptor < 0" << std::endl;
+    if (CAM->device_fd < 0) {
+        std::cerr << "video device file descriptor < 0" << std::endl;
         return -1;
     }
     if (!cmd) {
@@ -228,18 +231,18 @@ int CameraDemo::isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse
     ecs.controls = &ec;
     ecs.count = 1;
 
-    ioctl(CAM->isp_fd, VIDIOC_G_EXT_CTRLS, &ecs);
+    ioctl(CAM->device_fd, VIDIOC_G_EXT_CTRLS, &ecs);
 
     // --- initialized --- //
 
     strcpy(ec.string, jsonRequest.dump().c_str());
 
-    int ret = ioctl(CAM->isp_fd, VIDIOC_S_EXT_CTRLS, &ecs);
+    int ret = ioctl(CAM->device_fd, VIDIOC_S_EXT_CTRLS, &ecs);
     if (ret != 0) {
         std::cerr << "failed to set ext ctrl\n" << std::endl;
         goto end;
     } else {
-        ioctl(CAM->isp_fd, VIDIOC_G_EXT_CTRLS, &ecs);
+        ioctl(CAM->device_fd, VIDIOC_G_EXT_CTRLS, &ecs);
 
         std::string res = ec.string;
         jsonResponse = json::parse(res);
@@ -317,6 +320,9 @@ void CameraDemo::openCamera()
 {
     cap.release();
 
+    cam1.init(1);
+    cam2.init(2);
+
     if (cam1.status == READY && cam2.status == READY)
     {
         CAM = &cam1;
@@ -373,14 +379,14 @@ void CameraDemo::openCamera()
     emit videoSrcChanged();
     emit interfaceChanged();
 
-
     // cap = cv::VideoCapture(pipeline, cv::CAP_GSTREAMER); // generate VideoCapture object
  
+
     std::cout << "pipeline: " << CAM->isp_pipeline << std::endl;
-    cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER); // generate VideoCapture object
-    double fps = cap.get(cv::CAP_PROP_FPS); // get FPS // TBD: seems to be not real
-    qDebug() << "fps: " << fps;
-    tUpdate.start(1000 / fps);
+    // cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER); // generate VideoCapture object
+    // double fps = cap.get(cv::CAP_PROP_FPS); // get FPS // TBD: seems to be not real
+    // qDebug() << "fps: " << fps;
+    // tUpdate.start(1000 / fps);
 }
 
 void CameraDemo::updateFrame()
@@ -485,24 +491,13 @@ QString CameraDemo::getFormat() const
 {
     return "TBD";
 }
-QString CameraDemo::getInterfaceString() const
-{
-
-    std::string ret = "CSI" + std::to_string(CAM->csi_interface);
-    if (CAM->port >= 0)
-    {
-        ret += ", PORT" + std::to_string(CAM->port);
-    }
-    return QString::fromStdString(ret);
-}
 int CameraDemo::getInterface() const
 {
     return CAM->csi_interface;
 }
 int CameraDemo::getVideoSrc() const
 {
-    std::cout << "getVideoSrc: " << CAM->video_src << std::endl;
-    return CAM->video_src; 
+   return CAM->video_src; 
 }
 
 QString CameraDemo::getRecommendedOverlays() const
@@ -624,31 +619,12 @@ int CameraDemo::getExposure()
 // ################################### SLOTS ###################################
 void CameraDemo::setVideoSource(video_srcs value)
 {
-    tUpdate.stop();
-    cap.release();
-
     if (value == ISP) {
-        CAM->video_src = ISP;
-
-        std::cout << "pipeline: " << CAM->isp_pipeline << std::endl;
-        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER); // generate VideoCapture object
-        double fps = cap.get(cv::CAP_PROP_FPS); // get FPS // TBD: seems to be not real
-        qDebug() << "fps: " << fps;
-        tUpdate.start(1000 / fps);
+        std::cout << "set to ISP" << std::endl;
     }
     else if (value == ISI) {
-        CAM->video_src = ISI;
-
-        std::cout << CAM->setup_pipeline_command << std::endl;
-        CAM->setup_pipeline(); // setup pipeline every time ISP is switched to ISI
-        sleep(1);
-        std::cout << "pipeline: " << CAM->isi_pipeline << std::endl;
-        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER); // generate VideoCapture object
-        double fps = cap.get(cv::CAP_PROP_FPS); // get FPS // TBD: seems to be not real
-        qDebug() << "fps: " << fps;
-        tUpdate.start(1000 / fps);
+        std::cout << "set to ISI" << std::endl;
     }
-    emit interfaceChanged();
 }
 
 void CameraDemo::setInterface(csi_interface value)

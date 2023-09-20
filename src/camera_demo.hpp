@@ -22,127 +22,71 @@
 #include <fcntl.h>
 #include <iostream>
 
+
+
+#include <unistd.h>
+
+
+
 #include "json.hpp"
 
 #include <opencv2/opencv.hpp>
 
 using json = nlohmann::json;
+namespace fs = std::filesystem;
 
 
 #define V4L2_CID_VIV_EXTCTRL 0x98F901
 
 enum video_srcs{ISP, ISI};
+enum camera_status{ACTIVE, READY, UNCONNECTED, ERROR};
+enum status{SINGLE_CAM, DUAL_CAM, NO_CAM, WRONG_OVERLAYS};
+enum csi_interface{CSI1, CSI2};
 
-struct camera {
-    std::string device =  ""; // /dev/cam-csi1-port0   (CAM)
-    int device_fd = -1; // file descriptor of device (subdevFd)
-
-    std::string interface = "";
-    std::string sensor = "";
-    std::string framesize = "";
-    std::string format = "";
-    video_srcs video_src = ISP;
-
-    std::string v4l_subdev = ""; // (v4l_subdev in getSensor())
-    std::string pipeline_command = "";
-
-    
-
-
-
-    // std::string vd = ""; // video device (e.g. /dev/video-isp-csi1)
-
-    
+struct Sensor {
+    std::string camera_name;
+    std::string name;
+    bool hasAutoExposure;
+    int sensor_width; 
+    int sensor_height;
+    int frame_width; 
+    int frame_height;
+    int offset_x;
+    int offset_y;
 };
 
-// class IspJson {
-// public:
-//     bool isInitialized = 0;
 
+extern Sensor SENSORS[];
 
-//     IspJson() {
-//         ec.id = V4L2_CID_VIV_EXTCTRL;
-//         ec.size = 64 * 1024;
-//         ecs.controls = &ec;
-//         ecs.count = 1;
-//         ecs.ctrl_class = V4L2_CTRL_CLASS_USER;
-//         ec.string = (char*)malloc(ec.size * sizeof(char));
+class PhyCam {
+public:
+    PhyCam(const int _interface);
 
-//         // buffer = (char*)malloc(ec.size * sizeof(char));
-//         if (!ec.string) {
-//             std::cerr << "Malloc failed" << std::endl;
-//             // Handle the error appropriately (e.g., throw an exception or return an error code).
-//         }
-//     }
-//     ~IspJson() {
-//         free(ec.string);
-//     }
+    camera_status status = UNCONNECTED;
+
+    std::string device =  ""; // /dev/cam-csi1-port0   (CAM)
+    int device_fd = -1; // file descriptor of device (subdevFd)
+    int isp_fd = -1;
+
+    int csi_interface = -1;
+    int port = -1;
     
-//     void init(int videodev){
-//         vd = videodev;
-//         isInitialized = true;
 
-//         try {
-//             ioctl(vd, VIDIOC_G_EXT_CTRLS, &ecs);
-//         } catch (std::exception& e) {
-//             std::cerr << "Error on INIT" << std::endl;
-//         }
-//     }
+    Sensor *sensor = &SENSORS[0]; // Tbd
+    video_srcs video_src = ISP; // tbd init
 
-//     std::string read_json(std::string const& get_data) {
-//         // exit if not initialized
-//         std::cout << "bbb" << std::endl;
-//         _set_ctrls(get_data);
-//         return _get_ctrls();
-//     }
+    cv::VideoCapture cap;
 
-//     std::string write_json(std::string const& set_data) {
-//         // exit if not initialized
-//         _set_ctrls(set_data);
-//         return _get_ctrls();
-//     }
+    std::string setup_pipeline_command = "";
 
-// private:
-//     struct v4l2_ext_control ec;
-//     struct v4l2_ext_controls ecs;
-//     int vd;
-//     // char *buffer = 0;
+    std::string isp_pipeline = "";
+    std::string isi_pipeline = "";
 
-
-
-//     std::string _get_ctrls() {
-//         std::cout << "a" << ec.string << std::endl;
-
-//         memset(ec.string, 0, ec.size);
-//         std::cout << "b" << ec.string << std::endl;
-
-//         ioctl(vd, VIDIOC_G_EXT_CTRLS, &ecs);
-
-//         std::cout << "c" << ec.string << std::endl;
-//         return "asdf";
-//     }
-
-//     void _set_ctrls(std::string const& data) {
-//         memset(ec.string, 0, ec.size);
-//         // const char* cstr = data.c_str();
-//         const char* cstr = "";
-//         // std::string s_data = data.toStyledString();
-//         if (strlen(cstr) >= ec.size) {
-//             std::cerr << "Data size exceeds buffer size" << std::endl;
-//             // throw std::runtime_error("Data size exceeds buffer size");
-//         }
-
-//         std::cout << "d" << ec.string << std::endl;
-
-//         std::memcpy(ec.string, cstr, strlen(cstr));
-//         ioctl(vd, VIDIOC_S_EXT_CTRLS, &ecs);
-//         std::cout << "e" << ec.string << std::endl;
-
-
-//         // std::cout << ecs << std::endl;
-//     }
-// };
-
+    int init(int _interface);
+    int getSensor();
+    int setup_pipeline();
+    void stream(video_srcs vid_src);
+};
 
 class OpencvImageProvider : public QQuickImageProvider
 {
@@ -174,8 +118,11 @@ class CameraDemo : public QObject
     Q_PROPERTY(QString cameraName // Camera Name
                    READ getCameraName
                        NOTIFY sensorChanged);
-    Q_PROPERTY(QString interface // Interface
+    Q_PROPERTY(int interface // Interface
                    READ getInterface
+                       NOTIFY interfaceChanged);
+    Q_PROPERTY(QString interfaceString // Interface
+                   READ getInterfaceString
                        NOTIFY interfaceChanged);
     Q_PROPERTY(QString framesize // Framesize
                    READ getFramesize
@@ -183,7 +130,7 @@ class CameraDemo : public QObject
     Q_PROPERTY(QString format // Format
                    READ getFormat
                        NOTIFY formatChanged);
-    Q_PROPERTY(QString videoSrc // Video Source (ISP or ISI)
+    Q_PROPERTY(int videoSrc // Video Source (ISP or ISI)
                    READ getVideoSrc
                        NOTIFY videoSrcChanged);
     Q_PROPERTY(bool autoExposure // Auto Exposure
@@ -203,9 +150,9 @@ class CameraDemo : public QObject
                    READ getRecommendedOverlays
                        NOTIFY recommendedOverlaysChanged);
                        
-    Q_PROPERTY(int errorDialog // No Camera Found
-                READ getErrorDialog
-                    NOTIFY errorDialogChanged);
+    Q_PROPERTY(int status // No Camera Found
+                READ getStatus
+                    NOTIFY statusChanged);
 
 public:
     CameraDemo(QObject *parent = nullptr);
@@ -219,26 +166,24 @@ private:
     cv::Mat frame;
     cv::VideoCapture cap;
 
-    std::string CAM;
-    std::string INTERFACE;
-    std::string SENSOR;
-    std::string FRAMESIZE;
-    std::string FORMAT;
-    video_srcs VIDEO_SRC = ISI;
 
-    // std::string vd = "";
-    int vd_fd = -1;
+
+
+    PhyCam cam1;
+    PhyCam cam2;
+    PhyCam* CAM = &cam1; // TBD: add default cam with empty strings
+
+
     int tmp = 0;
 
-    int ERROR = -1;
+
+    status STATUS;
+    // int ERROR = -1;
     QString RECOMMENDED_OVERLAYS = "";
 
     int getSensor(); // get Sensor and Framesize
-    int getCAM();
     void getControls();
 
-    int subdevFd = -1;
-    int streamid = 0;
     int isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse);
     int isp_read_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse);
 
@@ -254,25 +199,26 @@ signals:
     void videoSrcChanged();
     void interfaceChanged();
     void recommendedOverlaysChanged();
-    void errorDialogChanged();
+    void statusChanged();
+    void csiPortChanged();
 
 public slots:
     void openCamera();
     QString getCameraName() const;
-    QString getInterface() const;
     QString getFramesize() const;
     QString getFormat() const;
-    QString getVideoSrc() const;
     QString getRecommendedOverlays() const;
+    QString getInterfaceString() const;
+
+    int getInterface() const;
+    int getVideoSrc() const;
 
     bool getAutoExposure();
     bool getFlipHorizontal();
     bool getFlipVertical();
 
     int getExposure();
-
-    int getErrorDialog();
-
+    int getStatus();
 
     void setAutoExposure(bool value);
     void setFlipVertical(bool value);
@@ -280,6 +226,7 @@ public slots:
     void setExposure(int value);
 
     void setVideoSource(video_srcs value);
+    void setInterface(csi_interface value);
 
     void setDwe(bool value);
     void setAwb(bool value);
