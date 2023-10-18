@@ -12,8 +12,8 @@ import PhyTheme 1.0
 ApplicationWindow {
     visible: true
     visibility: Window.FullScreen
-    width: 1280
-    height: 800
+    width: 640
+    height: 480
 
     property int itemAngle: 55
     property int itemSize: 0.4 * width
