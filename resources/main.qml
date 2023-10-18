@@ -29,7 +29,7 @@ ApplicationWindow {
 
     FontLoader {
         id: icons
-        source: "qrc:/fonts/MaterialIcons-Regular.ttf"
+        source: "qrc:///fonts/MaterialIcons-Regular.ttf"
     }
     ListModel {
         id: pageModel
