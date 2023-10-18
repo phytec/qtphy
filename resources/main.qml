@@ -136,31 +136,29 @@ ApplicationWindow {
                     anchors.fill: parent
 
                     ColumnLayout {
-                        spacing: PhyTheme.marginBig
-                        Layout.margins: PhyTheme.marginBig
+                        spacing: PhyTheme.marginRegular
+                        Layout.margins: PhyTheme.marginRegular
+                        Layout.fillWidth: true
 
                         Label {
                             text: icon
                             color: PhyTheme.teal1
                             font.family: icons.font.family
-                            font.pointSize: Math.max(0.05 * parent.width, 48)
+                            font.pointSize: icons.font.pointSize * 3
                             Layout.alignment: Qt.AlignHCenter
                         }
                         Label {
-                            text: name
-                            elide: Text.ElideRight
+                            text: "<h2>" + name + "</h2>"
+                            wrapMode: Text.WordWrap
                             color: PhyTheme.white
-                            font.pointSize: Math.max(0.015 * parent.width, 24)
-                            Layout.alignment: Qt.AlignHCenter
                             Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
                         }
                         Label {
                             text: description
                             elide: Text.ElideRight
                             wrapMode: Text.WordWrap
-                            color: PhyTheme.gray1
-                            font.weight: Font.Light
-                            font.pointSize: Math.max(0.01 * parent.width, 20)
+                            color: PhyTheme.gray2
                             Layout.fillHeight: true
                             Layout.fillWidth: true
                         }
