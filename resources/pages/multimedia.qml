@@ -14,6 +14,7 @@ Page {
     header: PhyToolBar {
         id: header
         title: "Multimedia"
+        subTitle: !fileDialog.selectedFile ? "" : fileDialog.selectedFile.toString()
         buttonBack.onClicked: {
             video.pause()
             stack.pop()
