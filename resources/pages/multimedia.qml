@@ -15,8 +15,8 @@ Page {
         id: header
         title: "Multimedia"
         buttonBack.onClicked: {
-            stack.pop()
             video.pause()
+            stack.pop()
         }
         buttonMenu {
             text: PhyTheme.iconFont.folderOpen
