@@ -70,27 +70,6 @@ Page {
         id: video
         anchors.fill: parent
         source: fileDialog.selectedFile
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: video.playbackState != MediaPlayer.PlayingState ?
-                       video.play() : video.pause()
-        }
-        Label {
-            text: PhyTheme.iconFont.pause
-            font.family: icons.font.family
-            anchors.centerIn: parent
-            color: PhyTheme.white
-            scale: 4
-            visible: video.playbackState === MediaPlayer.PausedState
-        }
-        Label {
-            text: !fileDialog.selectedFile ? "No video opened. Select a file first!" :
-                                             fileDialog.selectedFile.toString().replace("file://", "")
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            color: PhyTheme.white
-        }
     }
 
     PhyFileDialog {
