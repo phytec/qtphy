@@ -10,6 +10,7 @@ import PhyTheme 1.0
 
 ToolBar {
     property string title: ""
+    property string subTitle: ""
     property alias buttonBack: buttonBack
     property alias buttonMenu: buttonMenu
 
@@ -21,24 +22,40 @@ ToolBar {
             text: PhyTheme.iconFont.arrowLeft
             font.family: icons.font.family
             flat: true
-            leftPadding: PhyTheme.marginRegular
-            rightPadding: PhyTheme.marginRegular
+            leftPadding: PhyTheme.marginBig
+            rightPadding: PhyTheme.marginBig
+            topPadding: PhyTheme.marginRegular
+            bottomPadding: PhyTheme.marginRegular
         }
-        Label {
-            text: title
-            elide: Label.ElideRight
-            horizontalAlignment: Qt.AlignHCenter
-            verticalAlignment: Qt.AlignVCenter
-            Layout.fillWidth: true
+        ColumnLayout {
+            Layout.alignment: Qt.AlignVCenter
+
+            Label {
+                text: "<b>" + title + "</b>"
+                elide: Text.ElideRight
+                Layout.alignment: Qt.AlignHCenter
+            }
+            Label {
+                text: subTitle
+                color: PhyTheme.gray4
+                visible: text !== ""
+                elide: Text.ElideLeft
+                scale: 0.8
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
+            }
         }
         ToolButton {
             id: buttonMenu
+            Layout.fillWidth: false
             text: PhyTheme.iconFont.list
             font.family: icons.font.family
             flat: true
             visible: false
-            leftPadding: PhyTheme.marginRegular
-            rightPadding: PhyTheme.marginRegular
+            leftPadding: PhyTheme.marginBig
+            rightPadding: PhyTheme.marginBig
+            topPadding: PhyTheme.marginRegular
+            bottomPadding: PhyTheme.marginRegular
         }
     }
 }
