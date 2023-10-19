@@ -95,6 +95,7 @@ Page {
 
     PhyFileDialog {
         id: fileDialog
+        selectedFile: "file:///usr/share/qtphy/videos/caminandes_3_llamigos_720p_vp9.webm"
         nameFilters: ["*.webm", "*.mp4"]
     }
 }
