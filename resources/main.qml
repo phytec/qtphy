@@ -167,11 +167,38 @@ ApplicationWindow {
             }
         }
 
+        DelegateModel {
+            id: displayDelegateModel
+            delegate: pageDelegate
+            model: pageModel
+
+            groups: [
+                DelegateModelGroup {
+                    id: configuredPages
+                    //includeByDefault: true
+                    name: "configured"
+                    property var model_index_map: []
+                }
+            ]
+            filterOnGroup: "configured"
+            Component.onCompleted: {
+                var count = pageModel.count;
+                for (var i = 0; i < count; i++) {
+                    var entry = pageModel.get(i);
+                    if (enabledPages.indexOf(entry.name) >= 0) {
+                        items.insert(entry, "configured");
+                        var t = configuredPages.model_index_map
+                        t.push(i)
+                        configuredPages.model_index_map = t
+                    }
+                }
+            }
+        }
+
         PathView {
             id: pathView
             anchors.fill: parent
-            model: pageModel
-            delegate: pageDelegate
+            model: displayDelegateModel
             pathItemCount: 6 // must be even for proper item placement
             snapMode: PathView.SnapToItem
             preferredHighlightBegin: 0.5
