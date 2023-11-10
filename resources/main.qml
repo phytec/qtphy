@@ -18,15 +18,6 @@ ApplicationWindow {
     property int itemAngle: 55
     property int itemSize: 0.4 * width
 
-    function showPage() {
-        var page = pageModel.get(pathView.currentIndex)
-
-        if (page.page) {
-            pageLoader.source = page.page
-            stack.push(pageLoader)
-        }
-    }
-
     FontLoader {
         id: icons
         source: "qrc:///fonts/MaterialIcons-Regular.ttf"
@@ -131,6 +122,13 @@ ApplicationWindow {
                 width: 0.3 * parent.width
                 height: Math.min(0.36 * parent.width, 0.9 * parent.height)
 
+                function showPage() {
+                    if (page) {
+                        pageLoader.source = page
+                        stack.push(pageLoader)
+                    }
+                }
+
                 RowLayout {
                     spacing: 0
                     anchors.fill: parent
@@ -167,11 +165,29 @@ ApplicationWindow {
             }
         }
 
+        DelegateModel {
+            id: displayDelegateModel
+            delegate: pageDelegate
+            model: pageModel
+
+            groups: [
+                DelegateModelGroup { name: "configured" }
+            ]
+            filterOnGroup: "configured"
+            Component.onCompleted: {
+                for (var i = 0; i < pageModel.count; i++) {
+                    var entry = pageModel.get(i);
+                    if (enabledPages.indexOf(entry.name) >= 0) {
+                        items.insert(entry, "configured");
+                    }
+                }
+            }
+        }
+
         PathView {
             id: pathView
             anchors.fill: parent
-            model: pageModel
-            delegate: pageDelegate
+            model: displayDelegateModel
             pathItemCount: 6 // must be even for proper item placement
             snapMode: PathView.SnapToItem
             preferredHighlightBegin: 0.5
@@ -190,7 +206,7 @@ ApplicationWindow {
                 y: (parent.height - Math.min(0.36 * parent.width, 0.9 * parent.height)) / 2
                 width: 0.3 * parent.width
                 height: Math.min(0.36 * parent.width, 0.9 * parent.height)
-                onClicked: if (!parent.moving) showPage()
+                onClicked: if (!parent.moving) pathView.currentItem.showPage()
             }
             MouseArea {
                 x: 0.0325 * parent.width
