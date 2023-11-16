@@ -18,15 +18,6 @@ ApplicationWindow {
     property int itemAngle: 55
     property int itemSize: 0.4 * width
 
-    function showPage() {
-        var page = pageModel.get(pathView.currentIndex)
-
-        if (page.page) {
-            pageLoader.source = page.page
-            stack.push(pageLoader)
-        }
-    }
-
     FontLoader {
         id: icons
         source: "qrc:///fonts/MaterialIcons-Regular.ttf"
@@ -131,6 +122,13 @@ ApplicationWindow {
                 width: 0.3 * parent.width
                 height: Math.min(0.36 * parent.width, 0.9 * parent.height)
 
+                function showPage() {
+                    if (page) {
+                        pageLoader.source = page
+                        stack.push(pageLoader)
+                    }
+                }
+
                 RowLayout {
                     spacing: 0
                     anchors.fill: parent
@@ -173,24 +171,14 @@ ApplicationWindow {
             model: pageModel
 
             groups: [
-                DelegateModelGroup {
-                    id: configuredPages
-                    //includeByDefault: true
-                    name: "configured"
-                    property var model_index_map: []
-                }
+                DelegateModelGroup { name: "configured" }
             ]
             filterOnGroup: "configured"
             Component.onCompleted: {
-                var count = pageModel.count;
-                for (var i = 0; i < count; i++) {
-                    var entry = pageModel.get(i);
-                    if (enabledPages.indexOf(entry.name) >= 0) {
-                        items.insert(entry, "configured");
-                        var t = configuredPages.model_index_map
-                        t.push(i)
-                        configuredPages.model_index_map = t
-                    }
+                for (var i = 0; i < pageModel.count; i++) {
+                    var entry = pageModel.get(i)
+                    if (enabledPages.indexOf(entry.name) >= 0)
+                        items.insert(entry, "configured")
                 }
             }
         }
@@ -217,7 +205,7 @@ ApplicationWindow {
                 y: (parent.height - Math.min(0.36 * parent.width, 0.9 * parent.height)) / 2
                 width: 0.3 * parent.width
                 height: Math.min(0.36 * parent.width, 0.9 * parent.height)
-                onClicked: if (!parent.moving) showPage()
+                onClicked: if (!parent.moving) pathView.currentItem.showPage()
             }
             MouseArea {
                 x: 0.0325 * parent.width
