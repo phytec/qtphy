@@ -21,12 +21,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <iostream>
-
-
-
 #include <unistd.h>
-
-
 
 #include "json.hpp"
 
@@ -47,9 +42,9 @@ struct Sensor {
     std::string camera_name;
     std::string name;
     bool hasAutoExposure;
-    int sensor_width; 
+    int sensor_width;
     int sensor_height;
-    int frame_width; 
+    int frame_width;
     int frame_height;
     int offset_x;
     int offset_y;
@@ -70,22 +65,16 @@ public:
 
     int csi_interface = -1;
     int port = -1;
-    
 
-    Sensor *sensor = &SENSORS[0]; // Tbd
-    video_srcs video_src = ISP; // tbd init
-
+    Sensor *sensor = &SENSORS[0];
+    video_srcs video_src = ISP;
     cv::VideoCapture cap;
-
     std::string setup_pipeline_command = "";
-
     std::string isp_pipeline = "";
     std::string isi_pipeline = "";
 
-    int init(int _interface);
     int getSensor();
     int setup_pipeline();
-    void stream(video_srcs vid_src);
 };
 
 class OpencvImageProvider : public QQuickImageProvider
@@ -95,11 +84,6 @@ class OpencvImageProvider : public QQuickImageProvider
 public:
     OpencvImageProvider();
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override;
-
-    ~OpencvImageProvider()
-    {
-        qDebug() << "destroy OpencvImageProvider";
-    }
 
 public slots:
     void updateImage(const QImage &image);
@@ -145,18 +129,17 @@ class CameraDemo : public QObject
     Q_PROPERTY(int exposure // Exposure
                    READ getExposure
                        NOTIFY exposureChanged);
-                       
+
     Q_PROPERTY(QString recommendedOverlays // Recommended overlays
                    READ getRecommendedOverlays
                        NOTIFY recommendedOverlaysChanged);
-                       
+
     Q_PROPERTY(int status // No Camera Found
                 READ getStatus
                     NOTIFY statusChanged);
 
 public:
     CameraDemo(QObject *parent = nullptr);
-    static QObject *singletontypeProvider(QQmlEngine *engine, QJSEngine *scriptEngine);
     ~CameraDemo();
     void updateFrame();
     Q_INVOKABLE void reloadOverlays();
@@ -166,26 +149,17 @@ private:
     cv::Mat frame;
     cv::VideoCapture cap;
 
-
-
-
     PhyCam cam1;
     PhyCam cam2;
     PhyCam* CAM = &cam1; // TBD: add default cam with empty strings
 
-
     int tmp = 0;
-
 
     status STATUS;
     // int ERROR = -1;
     QString RECOMMENDED_OVERLAYS = "";
 
-    int getSensor(); // get Sensor and Framesize
-    void getControls();
-
     int isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse);
-    int isp_read_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse);
 
 signals:
     void newImage(QImage &);
