@@ -33,16 +33,18 @@ Page {
         id: content
         spacing: PhyTheme.marginBig
         anchors.fill: parent
-
+        // height: 800
+        // width: Math.max(scrollView.width, implicitWidth)
+        // Layout.fillWidth: true
+        // Layout.fillHeight: true
         // anchors.centerIn: parent
 
         ColumnLayout {
             Layout.topMargin: PhyTheme.marginBig
             Layout.leftMargin: PhyTheme.marginBig
             Layout.bottomMargin: PhyTheme.marginBig
+            Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.preferredWidth: parent.width * 0.7
 
             MessageDialog {
                 id: errorDialog1
@@ -64,12 +66,11 @@ Page {
                 informativeText: "No camera found on the CSI interfaces of the board!"
                 buttons: MessageDialog.Ok
             }
-
-           
             Image {
                 id: streamImage
                 Layout.fillHeight: true
                 Layout.fillWidth: true
+                // Layout.alignment: Qt.AlignVCenter
                 fillMode: Image.PreserveAspectFit
 
                 property bool counter: false
@@ -90,25 +91,25 @@ Page {
                 }
             }
         }
-
         ColumnLayout {
             Layout.topMargin: PhyTheme.marginBig
             Layout.rightMargin: PhyTheme.marginBig
             Layout.bottomMargin: PhyTheme.marginBig
+            Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.preferredWidth: parent.width * 0.25
             // Open Camera Button
             Button {
                 id: startButton
+                Layout.fillHeight: true
                 text: "(Re)-Open"
                 onClicked: {
                     cameraDemo.openCamera()
                 }
-                Layout.rightMargin: 10
                 Layout.alignment: Qt.AlignVCenter
             }
             RowLayout {
+                Layout.fillHeight: true
+
                 Label {
                     text: "ISP"
                     Layout.alignment: Qt.AlignVCenter
@@ -149,6 +150,8 @@ Page {
             }
             // Camera and Sensor Name
             Row {
+                Layout.fillHeight: true
+
                 Label {
                     text: "Connected Camera: "
                 }
@@ -159,6 +162,8 @@ Page {
             }
             // Interface
             Row {
+                Layout.fillHeight: true
+
                 Label {
                     text: "Interface: "
                 }
@@ -169,6 +174,8 @@ Page {
             }
             // Resolution
             Row {
+                Layout.fillHeight: true
+
                 Label {
                     text: "Resolution: "
                 }
@@ -177,22 +184,25 @@ Page {
                     text: cameraDemo.framesize
                 }
             }
-            // Color Format
-            Row {
-                Label {
-                    text: "Format: "
-                }
-                Label {
-                    id: formatLabel
-                    text: cameraDemo.format
-                }
-            }
+            // // Color Format
+            // Row {
+            //     Label {
+            //         text: "Format: "
+            //     }
+            //     Label {
+            //         id: formatLabel
+            //         text: cameraDemo.format
+            //     }
+            // }
             // Sensor Controls
             Label {
+                Layout.fillHeight: true
                 text: "Sensor Controls: "
             }
             // Horizontal Flip
             CheckBox {
+                Layout.fillHeight: true
+
                 id: flipHorizontalCheckbox
                 text: "Flip Horizontal"
                 checked: cameraDemo.flipHorizontal
@@ -203,6 +213,7 @@ Page {
             // Vertical Flip
             CheckBox {
                 id: flipVerticalCheckbox
+                Layout.fillHeight: true
                 text: "Flip Vertical"
                 checked: cameraDemo.flipVertical
                 onClicked: {
@@ -212,6 +223,7 @@ Page {
             // Auto Exposure
             CheckBox {
                 id: autoExposureCheckbox
+                Layout.fillHeight: true
                 text: "Auto Exposure"
                 // TBD: separate cameraname and sensor
                 enabled: (!videoSourceSwitch.checked) ? 0 : 1; // TBD: disable if camera has no auto exposure
@@ -222,10 +234,12 @@ Page {
             }
             // Exposure Slider
             Label {
+                Layout.fillHeight: true
                 text: "Exposure"
             }
             Slider {
                 id: exposureSlider
+                Layout.fillHeight: true
                 enabled: !(autoExposureCheckbox.checked || aecCheckbox.checked)
                 from: 0
                 value: cameraDemo.exposure
@@ -239,11 +253,13 @@ Page {
             }
             // ISP Controls
             Label {
+                Layout.fillHeight: true
                 text: "ISP Controls: "
             }
             // Auto Exposure (ISP)
             CheckBox {
                 id: aecCheckbox
+                Layout.fillHeight: true
                 text: "ISP Auto Exposure"
                 enabled: (cameraDemo.videoSrc==0)  ? true : false
                 checked: (cameraDemo.videoSrc == 0) ? true : false
@@ -251,9 +267,11 @@ Page {
                     cameraDemo.setAec(aecCheckbox.checked)
                 }
             }
+
             // Auto White Balance
             CheckBox {
                 id: awbCheckbox
+                Layout.fillHeight: true
                 text: "Auto White Balance"
                 enabled: (cameraDemo.videoSrc==0)  ? true : false
                 checked: (cameraDemo.videoSrc == 0) ? true : false
@@ -261,16 +279,19 @@ Page {
                     cameraDemo.setAwb(awbCheckbox.checked)
                 }
             }
-
             // Lens Shading Correction
             CheckBox {
                 id: lscCheckbox
+                Layout.fillHeight: true
                 text: "Lens Shading Correction"
                 enabled: (cameraDemo.videoSrc==0)  ? true : false
                 checked: (cameraDemo.videoSrc == 0) ? true : false
                 onClicked: {
                     cameraDemo.setLsc(lscCheckbox.checked)
                 }
+            }
+            Item {
+                Layout.fillHeight: true
             }
         }
     }
