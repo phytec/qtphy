@@ -12,11 +12,13 @@
 #include "device_info.hpp"
 #include "rauc.hpp"
 #include "camera_demo.hpp"
+#include <QDebug>
 
 void writeDefaultSettings()
 {
     QSettings settings;
     QList<QString> enabledPages = {
+        "Camera Demo",
         "Image Viewer",
         "Multimedia",
         "RAUC – Update Client",
@@ -34,7 +36,6 @@ void writeDefaultSettings()
     settings.endArray();
 }
 
-#include <QDebug>
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);

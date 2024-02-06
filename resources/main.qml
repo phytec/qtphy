@@ -25,7 +25,7 @@ ApplicationWindow {
     ListModel {
         id: pageModel
         ListElement {
-            icon: "\ue3f4" // TBD
+            icon: "\ue3f4" // TBD Icon
             name: "Camera Demo"
             description: "View capabilitys of phyCam in combination with V4L2 Controls"
             page: "qrc:///pages/camera_demo.qml"
