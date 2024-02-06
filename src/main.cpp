@@ -12,7 +12,6 @@
 #include "device_info.hpp"
 #include "rauc.hpp"
 #include "camera_demo.hpp"
-#include <QDebug>
 
 void writeDefaultSettings()
 {
@@ -68,21 +67,13 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<DeviceInfo>("Phytec.DeviceInfo", 1, 0, "DeviceInfo",
                                          DeviceInfo::singletontypeProvider);
     qmlRegisterType<Rauc>("Phytec.Rauc", 1, 0, "Rauc");
-    // qmlRegisterType<CameraDemo>("Phytec.CameraDemo", 1, 0, "CameraDemo");
-    
-    // qmlRegisterSingletonType<CameraDemo>("Phytec.CameraDemo", 1, 0, "CameraDemo",
-    //                                      CameraDemo::singletontypeProvider);
+    qmlRegisterType<CameraDemo>("Phytec.CameraDemo", 1, 0, "CameraDemo");
 
     QQmlApplicationEngine engine;
 
-    CameraDemo camDemoMain;
     OpencvImageProvider* cameraFrameProvider = new OpencvImageProvider;
-
-    engine.rootContext()->setContextProperty("camDemoMain", &camDemoMain);
     engine.rootContext()->setContextProperty("cameraFrameProvider", cameraFrameProvider);
-
     engine.addImageProvider(QLatin1String("myCam"), cameraFrameProvider);
-    QObject::connect(&camDemoMain, &CameraDemo::newImage, cameraFrameProvider, &OpencvImageProvider::updateImage);
 
     engine.addImportPath("qrc:///themes");
     engine.rootContext()->setContextProperty("raucHawkbitConfigPath",

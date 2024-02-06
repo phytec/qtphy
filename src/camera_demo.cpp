@@ -230,14 +230,12 @@ void CameraDemo::setDwe(bool value)
     json jRequest, jResponse;
     jRequest["bypass"] = !value;
     isp_ioctl("dwe.s.bypass", jRequest, jResponse);
-    qDebug() << "set DWE";
     return;
 }
 
 void CameraDemo::setAwb(bool value)
 {
     // Enable AWB
-    qDebug("Set AWB lkasdjfasjfasklfakjdfa");
     json jRequest, jResponse;
     jRequest["enable"] = value;
     isp_ioctl("awb.s.en", jRequest, jResponse);
@@ -377,6 +375,12 @@ void CameraDemo::reloadOverlays()
 OpencvImageProvider::OpencvImageProvider()
     : QQuickImageProvider(QQuickImageProvider::Image)
 {
+    // QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    // QGuiApplication app(argc, argv);
+    // QQmlApplicationEngine engine;
+
+
+
     image = QImage(1280, 800, QImage::Format_RGB888);
     image.fill(QColor("blue"));
 }
@@ -549,7 +553,6 @@ void CameraDemo::setVideoSource(video_srcs value)
         std::cout << "pipeline: " << CAM->isp_pipeline << std::endl;
         cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
         double fps = cap.get(cv::CAP_PROP_FPS);
-        qDebug() << "fps: " << fps;
         tUpdate.start(1000 / fps);
     }
     else if (value == ISI)
@@ -562,7 +565,6 @@ void CameraDemo::setVideoSource(video_srcs value)
         std::cout << "pipeline: " << CAM->isi_pipeline << std::endl;
         cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
         double fps = cap.get(cv::CAP_PROP_FPS);
-        qDebug() << "fps: " << fps;
         tUpdate.start(1000 / fps);
     }
     emit interfaceChanged();

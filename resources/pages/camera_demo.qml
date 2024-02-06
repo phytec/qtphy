@@ -7,19 +7,26 @@ import QtQuick 2.0
 import QtQuick.Dialogs
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.0
+import Phytec.CameraDemo 1.0
 import PhyTheme 1.0
 import QtMultimedia
-// import Phytec.CameraDemo 1.0
 import "../controls"
-
-// import org.freedesktop.gstreamer.Qt6GLVideoItem 1.0
-// import org.freedesktop.gstreamer.Qt6GLVideoItem
 
 Page {
     header: PhyToolBar {
         title: "Camera Demo"
         buttonBack.onClicked: stack.pop()
         buttonMenu.visible: false
+    }
+    CameraDemo {
+        id: cameraDemo
+    }
+    // Connect cameraDemo and cameraFrameProvider
+    Connections {
+        target: cameraDemo
+        function onNewImage(image) {
+            cameraFrameProvider.updateImage(image)
+        }
     }
 
     RowLayout {
@@ -39,24 +46,23 @@ Page {
 
             MessageDialog {
                 id: errorDialog1
-                visible: (camDemoMain.status == 3) ? true : false
+                visible: (cameraDemo.status == 3) ? true : false
 
                 text: "Cannot open Camera!"
                 informativeText: "Seems like a camera is connected but the wrong devicetree overlays have been selected.\n" +
-                "The detectCamera script recommends the following devicetree overlays:\n\n" + camDemoMain.recommendedOverlays + "\n\n" +
+                "The detectCamera script recommends the following devicetree overlays:\n\n" + cameraDemo.recommendedOverlays + "\n\n" +
                 "Do you want to load these overlays and reboot?"
                 buttons: MessageDialog.Ok | MessageDialog.Cancel
-                onAccepted: camDemoMain.reloadOverlays()
+                onAccepted: cameraDemo.reloadOverlays()
             }
 
             MessageDialog {
                 id: errorDialog2
-                visible: (camDemoMain.status == 2) ? true : false
+                visible: (cameraDemo.status == 2) ? true : false
 
                 text: "No Camera Found!"
                 informativeText: "No camera found on the CSI interfaces of the board!"
                 buttons: MessageDialog.Ok
-                // onAccepted: 
             }
 
            
@@ -97,8 +103,7 @@ Page {
                 id: startButton
                 text: "(Re)-Open"
                 onClicked: {
-                    camDemoMain.openCamera()
-                    // notFoundDialog1.open()
+                    cameraDemo.openCamera()
                 }
                 Layout.rightMargin: 10
                 Layout.alignment: Qt.AlignVCenter
@@ -110,10 +115,10 @@ Page {
                 }
                 Switch {
                     id: videoSourceSwitch
-                    checked: camDemoMain.videoSrc
+                    checked: cameraDemo.videoSrc
 
                     onCheckedChanged: {
-                        camDemoMain.setVideoSource(checked)
+                        cameraDemo.setVideoSource(checked)
                     }
                     Layout.alignment: Qt.AlignVCenter
                 }
@@ -129,11 +134,11 @@ Page {
                 }
                 Switch {
                     id: interfaceSwitch
-                    checked: (camDemoMain.interface == 2) ? 1 : 0// TBD enum
-                    enabled: (camDemoMain.status == 1) ? 1 : 0 // TBD enum
+                    checked: (cameraDemo.interface == 2) ? 1 : 0// TBD enum
+                    enabled: (cameraDemo.status == 1) ? 1 : 0 // TBD enum
 
                     onCheckedChanged: {
-                        camDemoMain.setInterface(checked)
+                        cameraDemo.setInterface(checked)
                     }
                     Layout.alignment: Qt.AlignVCenter
                 }
@@ -149,7 +154,7 @@ Page {
                 }
                 Label {
                     id: cameraNameLabel
-                    text: camDemoMain.cameraName
+                    text: cameraDemo.cameraName
                 }
             }
             // Interface
@@ -159,7 +164,7 @@ Page {
                 }
                 Label {
                     id: interfaceLabel
-                    text: camDemoMain.interfaceString
+                    text: cameraDemo.interfaceString
                 }
             }
             // Resolution
@@ -169,7 +174,7 @@ Page {
                 }
                 Label {
                     id: resolutionLabel
-                    text: camDemoMain.framesize
+                    text: cameraDemo.framesize
                 }
             }
             // Color Format
@@ -179,7 +184,7 @@ Page {
                 }
                 Label {
                     id: formatLabel
-                    text: camDemoMain.format
+                    text: cameraDemo.format
                 }
             }
             // Sensor Controls
@@ -190,18 +195,18 @@ Page {
             CheckBox {
                 id: flipHorizontalCheckbox
                 text: "Flip Horizontal"
-                checked: camDemoMain.flipHorizontal
+                checked: cameraDemo.flipHorizontal
                 onClicked: {
-                    camDemoMain.setFlipHorizontal(flipHorizontalCheckbox.checked)
+                    cameraDemo.setFlipHorizontal(flipHorizontalCheckbox.checked)
                 }
             }
             // Vertical Flip
             CheckBox {
                 id: flipVerticalCheckbox
                 text: "Flip Vertical"
-                checked: camDemoMain.flipVertical
+                checked: cameraDemo.flipVertical
                 onClicked: {
-                    camDemoMain.setFlipVertical(flipVerticalCheckbox.checked)
+                    cameraDemo.setFlipVertical(flipVerticalCheckbox.checked)
                 }
             }
             // Auto Exposure
@@ -210,9 +215,9 @@ Page {
                 text: "Auto Exposure"
                 // TBD: separate cameraname and sensor
                 enabled: (!videoSourceSwitch.checked) ? 0 : 1; // TBD: disable if camera has no auto exposure
-                checked: (videoSourceSwitch.checked  && camDemoMain.autoExposure) ? 1 : 0;
+                checked: (videoSourceSwitch.checked  && cameraDemo.autoExposure) ? 1 : 0;
                 onClicked: {
-                    camDemoMain.setAutoExposure(autoExposureCheckbox.checked)
+                    cameraDemo.setAutoExposure(autoExposureCheckbox.checked)
                 }
             }
             // Exposure Slider
@@ -223,13 +228,13 @@ Page {
                 id: exposureSlider
                 enabled: !(autoExposureCheckbox.checked || aecCheckbox.checked)
                 from: 0
-                value: camDemoMain.exposure
+                value: cameraDemo.exposure
                 to: 1500
                 // to: 65535 // TBD: this is the original maximum but it is way too high
                 // maybe orient on auto_exposure_max
                 // step = 1
                 onMoved: {
-                    camDemoMain.setExposure(exposureSlider.value)
+                    cameraDemo.setExposure(exposureSlider.value)
                 }
             }
             // ISP Controls
@@ -240,31 +245,31 @@ Page {
             CheckBox {
                 id: aecCheckbox
                 text: "ISP Auto Exposure"
-                enabled: (camDemoMain.videoSrc==0)  ? true : false
-                checked: (camDemoMain.videoSrc == 0) ? true : false
+                enabled: (cameraDemo.videoSrc==0)  ? true : false
+                checked: (cameraDemo.videoSrc == 0) ? true : false
                 onClicked: {
-                    camDemoMain.setAec(aecCheckbox.checked)
+                    cameraDemo.setAec(aecCheckbox.checked)
                 }
             }
-            // Auto White Balance (TBD)
+            // Auto White Balance
             CheckBox {
                 id: awbCheckbox
                 text: "Auto White Balance"
-                enabled: (camDemoMain.videoSrc==0)  ? true : false
-                checked: (camDemoMain.videoSrc == 0) ? true : false
+                enabled: (cameraDemo.videoSrc==0)  ? true : false
+                checked: (cameraDemo.videoSrc == 0) ? true : false
                 onClicked: {
-                    camDemoMain.setAwb(awbCheckbox.checked)
+                    cameraDemo.setAwb(awbCheckbox.checked)
                 }
             }
 
-            // Lens Shading Correction (TBD)
+            // Lens Shading Correction
             CheckBox {
                 id: lscCheckbox
                 text: "Lens Shading Correction"
-                enabled: (camDemoMain.videoSrc==0)  ? true : false
-                checked: (camDemoMain.videoSrc == 0) ? true : false
+                enabled: (cameraDemo.videoSrc==0)  ? true : false
+                checked: (cameraDemo.videoSrc == 0) ? true : false
                 onClicked: {
-                    camDemoMain.setLsc(lscCheckbox.checked)
+                    cameraDemo.setLsc(lscCheckbox.checked)
                 }
             }
         }
