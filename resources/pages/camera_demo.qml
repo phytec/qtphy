@@ -92,8 +92,6 @@ Page {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.preferredWidth: parent.width * 0.25
-            // spacing: PhyTheme.marginBig
-
             // Open Camera Button
             Button {
                 id: startButton
@@ -124,8 +122,7 @@ Page {
                     Layout.alignment: Qt.AlignVCenter
                     Layout.rightMargin: 10
                 }
-                
-                
+
                 Label {
                     text: "CSI1"
                     Layout.alignment: Qt.AlignVCenter
@@ -145,7 +142,6 @@ Page {
                     Layout.alignment: Qt.AlignVCenter
                 }
             }
-
             // Camera and Sensor Name
             Row {
                 Label {
@@ -156,7 +152,6 @@ Page {
                     text: camDemoMain.cameraName
                 }
             }
-
             // Interface
             Row {
                 Label {
@@ -167,7 +162,6 @@ Page {
                     text: camDemoMain.interfaceString
                 }
             }
-
             // Resolution
             Row {
                 Label {
@@ -178,7 +172,6 @@ Page {
                     text: camDemoMain.framesize
                 }
             }
-
             // Color Format
             Row {
                 Label {
@@ -189,18 +182,10 @@ Page {
                     text: camDemoMain.format
                 }
             }
-
-            // // Video SRC (ISP / ISI)
-            // Row {
-            //     Label {
-            //         text: "Video Source: "
-            //     }
-            //     Label {
-            //         id: videoSrcLabel
-            //         text: camDemoMain.videoSrc
-            //     }
-            // }
-
+            // Sensor Controls
+            Label {
+                text: "Sensor Controls: "
+            }
             // Horizontal Flip
             CheckBox {
                 id: flipHorizontalCheckbox
@@ -210,7 +195,6 @@ Page {
                     camDemoMain.setFlipHorizontal(flipHorizontalCheckbox.checked)
                 }
             }
-
             // Vertical Flip
             CheckBox {
                 id: flipVerticalCheckbox
@@ -220,7 +204,6 @@ Page {
                     camDemoMain.setFlipVertical(flipVerticalCheckbox.checked)
                 }
             }
-
             // Auto Exposure
             CheckBox {
                 id: autoExposureCheckbox
@@ -232,7 +215,6 @@ Page {
                     camDemoMain.setAutoExposure(autoExposureCheckbox.checked)
                 }
             }
-
             // Exposure Slider
             Label {
                 text: "Exposure"
@@ -250,33 +232,10 @@ Page {
                     camDemoMain.setExposure(exposureSlider.value)
                 }
             }
-
-            // // Lens
-            // Label {
-            //     text: "Lens:"
-            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-            // }
-            // ComboBox {
-            //     id: lensComboBox
-            //     model: ["DEFAULT", "Lens 1", "Lens 2", "Lens 3"]
-            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-            // }
-
-            // // Dewarping (TBD)
-            // CheckBox {
-            //     id: dweCheckbox
-            //     text: "Dewarping"
-            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-            //     checked: camDemoMain.dwe
-            //     onClicked: {
-            //         camDemoMain.setDwe(dweCheckbox.checked)
-            //     }
-            // }
-
+            // ISP Controls
             Label {
                 text: "ISP Controls: "
             }
-
             // Auto Exposure (ISP)
             CheckBox {
                 id: aecCheckbox
@@ -287,7 +246,6 @@ Page {
                     camDemoMain.setAec(aecCheckbox.checked)
                 }
             }
-
             // Auto White Balance (TBD)
             CheckBox {
                 id: awbCheckbox
@@ -309,21 +267,6 @@ Page {
                     camDemoMain.setLsc(lscCheckbox.checked)
                 }
             }
-            
-
-            // // Auto Gain (TBD)
-            // CheckBox {
-            //     id: autoGainCheckbox
-            //     text: "Auto Gain (analog)"
-            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-            // }
-
-            // // Black Level Correction (TBD)
-            // CheckBox {
-            //     id: blackLevelCorrectionCheckbox
-            //     text: "Black Level Correction"
-            //     enabled: (camDemoMain.videoSrc=="ISP")  ? true : false
-            // }
         }
     }
 }
