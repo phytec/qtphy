@@ -366,8 +366,6 @@ void CameraDemo::updateFrame()
 void CameraDemo::reloadOverlays()
 {
     std::string command = "/root/detectCamera.sh -s \"" + RECOMMENDED_OVERLAYS.toStdString() + "\"";
-
-    std::cout << command << std::endl;
     system(command.c_str());
 }
 
@@ -438,7 +436,6 @@ int CameraDemo::getInterface() const
 }
 int CameraDemo::getVideoSrc() const
 {
-    std::cout << "getVideoSrc: " << CAM->video_src << std::endl;
     return CAM->video_src;
 }
 
@@ -550,7 +547,6 @@ void CameraDemo::setVideoSource(video_srcs value)
     {
         CAM->video_src = ISP;
 
-        std::cout << "pipeline: " << CAM->isp_pipeline << std::endl;
         cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
         double fps = cap.get(cv::CAP_PROP_FPS);
         tUpdate.start(1000 / fps);
@@ -559,10 +555,8 @@ void CameraDemo::setVideoSource(video_srcs value)
     {
         CAM->video_src = ISI;
 
-        std::cout << CAM->setup_pipeline_command << std::endl;
         CAM->setup_pipeline(); // setup pipeline every time ISP is switched to ISI
         sleep(1);
-        std::cout << "pipeline: " << CAM->isi_pipeline << std::endl;
         cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
         double fps = cap.get(cv::CAP_PROP_FPS);
         tUpdate.start(1000 / fps);
@@ -575,7 +569,6 @@ void CameraDemo::setInterface(csi_interface value)
     if (value == CSI1)
     {
         CAM = &cam1;
-        std::cout << "set to CSI1" << std::endl;
         emit framesizeChanged();
         emit sensorChanged();
         emit autoExosureChanged();
@@ -589,7 +582,6 @@ void CameraDemo::setInterface(csi_interface value)
     else if (value == CSI2)
     {
         CAM = &cam2;
-        std::cout << "set to CSI2" << std::endl;
         emit framesizeChanged();
         emit sensorChanged();
         emit autoExosureChanged();
