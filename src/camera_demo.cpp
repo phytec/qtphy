@@ -34,33 +34,17 @@
 #include "json.hpp"
 using json = nlohmann::json;
 
-// TBD
-// If on ISI: execute setup-pipeline-csi1
-// Else if on ISP: complete the pipeline manually
-
-// TBD: REMOVE THIS
-// QObject *CameraDemo::singletontypeProvider(QQmlEngine *engine, QJSEngine *scriptEngine)
-// {
-//     Q_UNUSED(engine);
-//     Q_UNUSED(scriptEngine);
-
-//     CameraDemo *cameraDemo = new CameraDemo();
-//     return cameraDemo;
-// }
-
 Sensor SENSORS[] = {
-    {"", "", false, 0, 0, 0, 0, 0, 0}, // default
-    {"VM016", "ar0144", true, 1280, 800, 1280, 800, 0, 0}, // vm016
+    {"", "", false, 0, 0, 0, 0, 0, 0},                          // default
+    {"VM016", "ar0144", true, 1280, 800, 1280, 800, 0, 0},      // vm016
     {"VM017", "ar0521", false, 2560, 1440, 1280, 720, 16, 252}, // vm017
-    {"VM020", "ar0234", true, 2560, 1440, 1280, 720, 16, 252}, // vm020 (TBD)
-    {"---", "---", false, 0, 0, 0, 0, 0, 0} // Sentinel value to indicate the end
+    {"VM020", "ar0234", true, 2560, 1440, 1280, 720, 16, 252},  // vm020 (TBD)
+    {"---", "---", false, 0, 0, 0, 0, 0, 0}                     // Sentinel value to indicate the end
 
 };
 
-
 CameraDemo::CameraDemo(QObject *parent) : QObject(parent), cam1(1), cam2(2)
 {
-    qDebug() << "CameraDemo constructor";
     connect(&tUpdate, &QTimer::timeout, this, &CameraDemo::updateFrame);
 }
 
@@ -73,6 +57,7 @@ CameraDemo::~CameraDemo()
 
 PhyCam::PhyCam(int _interface) : csi_interface(_interface)
 {
+    // Check if camera device can be found in /dev
     device = "/dev/cam-csi" + std::to_string(csi_interface);
     if (access(device.c_str(), F_OK) == 0)
     { // phycam-M on csi-1
@@ -90,45 +75,41 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
     }
     else
     {
-        // TBD: no camera found
         status = UNCONNECTED;
         return;
     }
-
-    if ((access(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0) || 
+    // Check if isp and isi overlays are loaded
+    if ((access(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0) ||
         (access(("/dev/video-isi-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0))
     {
-        // TBD: wrong overlays
-        // please load isi and isp overlay
+        std::cerr << "ERROR: Please load isi and isp overlay for your camera" << std::endl;
         status = UNCONNECTED;
         return;
     }
-
+    // Open device_fd
     device_fd = open(device.c_str(), O_RDWR);
     if (device_fd == -1)
     {
-        std::cerr << "ERROR: could not open device fd" << std::endl;
+        std::cerr << "ERROR: Could not open device fd" << std::endl;
         status = ERROR;
         return;
     }
-
+    // Open isp_fd
     isp_fd = open(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), O_RDWR | O_NONBLOCK, 0);
     if (isp_fd == -1)
     {
-        std::cerr << "ERROR: could not open isp fd" << std::endl;
+        std::cerr << "ERROR: Could not open isp fd" << std::endl;
         status = ERROR;
         return;
     }
-    
-    // get sensor of connected camera (includes framesize etc.)
+    // Get sensor of connected camera (includes framesize etc.)
     if (getSensor() < 0)
     {
-        // Failed to get sensor
+        std::cerr << "ERROR: Failed to get sensor" << std::endl;
         status = ERROR;
         return;
     }
-
-    // construct setup_pipeline_command
+    // Construct setup_pipeline_command
     setup_pipeline_command = "/usr/bin/setup-pipeline-csi" + std::to_string(csi_interface);
     if (port == 1)
     {
@@ -138,8 +119,7 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
     setup_pipeline_command += " -s " + std::to_string(sensor->frame_width) + "x" + std::to_string(sensor->frame_height);
     setup_pipeline_command += " -o \"(" + std::to_string(sensor->offset_x) + "," + std::to_string(sensor->offset_y) + ")\"";
 
-
-    // construct pipelines:
+    // Construct gstreamer pipelines:
     std::string framesize = "width=" + std::to_string(sensor->frame_width) + ", height=" + std::to_string(sensor->frame_height);
     isp_pipeline = "v4l2src device=/dev/video-isp-csi" + std::to_string(csi_interface) + " ! video/x-raw,format=YUY2, " + framesize + " ! appsink";
     isi_pipeline = "v4l2src device=/dev/video-isi-csi" + std::to_string(csi_interface) + " ! video/x-bayer,format=grbg, " + framesize + " ! appsink";
@@ -147,20 +127,10 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
     status = READY;
 }
 
-
-void PhyCam::stream(video_srcs vid_src)
-{
-    if (setup_pipeline() != 0) {
-        std::cerr << "ERROR: setup-pipeline failed" << std::endl;
-        return;
-    }
-}
-
 int PhyCam::setup_pipeline()
 {
     return system(setup_pipeline_command.c_str());
 }
-
 
 int PhyCam::getSensor()
 {
@@ -201,17 +171,15 @@ int PhyCam::getSensor()
     }
 }
 
-
-
-
-
-int CameraDemo::isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse) {
-    if (CAM->isp_fd < 0) {
-        std::cerr << "isp file descriptor < 0" << std::endl;
+int CameraDemo::isp_ioctl(const char *cmd, json &jsonRequest, json &jsonResponse)
+{
+    if (CAM->isp_fd < 0)
+    {
+        std::cerr << "ERROR: ISP file descriptor < 0" << std::endl;
         return -1;
     }
-    if (!cmd) {
-        std::cerr << "cmd should not be null!" << std::endl;
+    if (!cmd)
+    {
         return -1;
     }
 
@@ -230,15 +198,23 @@ int CameraDemo::isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse
 
     ioctl(CAM->isp_fd, VIDIOC_G_EXT_CTRLS, &ecs);
 
-    // --- initialized --- //
+    // --- Initialized --- //
 
     strcpy(ec.string, jsonRequest.dump().c_str());
 
+    // Set V4L2-control
     int ret = ioctl(CAM->isp_fd, VIDIOC_S_EXT_CTRLS, &ecs);
-    if (ret != 0) {
-        std::cerr << "failed to set ext ctrl\n" << std::endl;
-        goto end;
-    } else {
+    if (ret != 0)
+    {
+        std::cerr << "ERROR: Failed to set ISP ext ctrl\n"
+                  << std::endl;
+        delete[] ec.string;
+        ec.string = NULL;
+        return 555;
+    }
+    else
+    {
+        // Get V4L2-control
         ioctl(CAM->isp_fd, VIDIOC_G_EXT_CTRLS, &ecs);
 
         std::string res = ec.string;
@@ -247,12 +223,6 @@ int CameraDemo::isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse
         ec.string = NULL;
         return 0;
     }
-
-end:
-    delete ec.string;
-    ec.string = NULL;
-    // return S_EXT_FLAG;
-    return 555;
 }
 
 void CameraDemo::setDwe(bool value)
@@ -266,12 +236,13 @@ void CameraDemo::setDwe(bool value)
 
 void CameraDemo::setAwb(bool value)
 {
+    // Enable AWB
+    qDebug("Set AWB lkasdjfasjfasklfakjdfa");
     json jRequest, jResponse;
     jRequest["enable"] = value;
     isp_ioctl("awb.s.en", jRequest, jResponse);
 
-    // set white balance:
-
+    // Configure AWB parameters
     json request = json::parse(R"(
         {
         "matrix": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
@@ -288,11 +259,7 @@ void CameraDemo::setAwb(bool value)
         }
         }
     )");
-
     isp_ioctl("wb.s.cfg", jRequest, jResponse);
-
-    // isp.write_json(request)
-
     return;
 }
 
@@ -311,7 +278,6 @@ void CameraDemo::setAec(bool value)
     isp_ioctl("ae.s.en", jRequest, jResponse);
     return;
 }
-
 
 void CameraDemo::openCamera()
 {
@@ -338,10 +304,11 @@ void CameraDemo::openCamera()
 
         QProcess process;
         QStringList arguments;
-        arguments << "/root/detectCamera.sh" << "-m";
+        arguments << "detectCamera"
+                  << "-m";
 
         process.start("/bin/sh", arguments);
-        process.waitForFinished(-1); // Warten, bis das Skript beendet ist
+        process.waitForFinished(-1);
 
         QString output = process.readAllStandardOutput();
         int returnCode = process.exitCode();
@@ -362,7 +329,7 @@ void CameraDemo::openCamera()
         return;
     }
 
-    // // Emit signals to update GUI
+    // Emit signals to update GUI
     emit framesizeChanged();
     emit sensorChanged();
     emit autoExosureChanged();
@@ -373,13 +340,9 @@ void CameraDemo::openCamera()
     emit videoSrcChanged();
     emit interfaceChanged();
 
-
-    // cap = cv::VideoCapture(pipeline, cv::CAP_GSTREAMER); // generate VideoCapture object
- 
-    std::cout << "pipeline: " << CAM->isp_pipeline << std::endl;
-    cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER); // generate VideoCapture object
-    double fps = cap.get(cv::CAP_PROP_FPS); // get FPS // TBD: seems to be not real
-    qDebug() << "fps: " << fps;
+    // Start capturing video
+    cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
+    double fps = cap.get(cv::CAP_PROP_FPS);
     tUpdate.start(1000 / fps);
 }
 
@@ -394,7 +357,8 @@ void CameraDemo::updateFrame()
         QImage image = QImage(frame.data, frame.cols, frame.rows, QImage::Format_RGB888);
         emit newImage(image);
     }
-    else {
+    else
+    {
         cv::cvtColor(rawFrame, frame, cv::COLOR_BayerGB2RGB);
         QImage image = QImage(frame.data, frame.cols, frame.rows, QImage::Format_RGB888);
         emit newImage(image);
@@ -408,21 +372,6 @@ void CameraDemo::reloadOverlays()
     std::cout << command << std::endl;
     system(command.c_str());
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ################# OpencvImageProvider #################
 OpencvImageProvider::OpencvImageProvider()
@@ -453,22 +402,6 @@ void OpencvImageProvider::updateImage(const QImage &image)
     this->image = image;
     emit imageChanged();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ################# GETTER FUNCTIONS FOR UI #################
 QString CameraDemo::getCameraName() const
@@ -502,7 +435,7 @@ int CameraDemo::getInterface() const
 int CameraDemo::getVideoSrc() const
 {
     std::cout << "getVideoSrc: " << CAM->video_src << std::endl;
-    return CAM->video_src; 
+    return CAM->video_src;
 }
 
 QString CameraDemo::getRecommendedOverlays() const
@@ -515,19 +448,18 @@ int CameraDemo::getStatus()
     return STATUS;
 }
 
-
 bool CameraDemo::getAutoExposure()
 {
-    // CAM->device_fd not yet opened
-    if (CAM->device_fd < 0) {
+    if (CAM->device_fd < 0)
+    {
         return false;
     }
-    if (! CAM->sensor->hasAutoExposure) // Cameras without auto exposure
+    if (!CAM->sensor->hasAutoExposure) 
     {
         return 0;
     }
     struct v4l2_control control;
-    std::memset(&control, 0, sizeof(control)); // set memory of control to all zeros (for idempotenty)
+    std::memset(&control, 0, sizeof(control));
 
     control.id = V4L2_CID_EXPOSURE_AUTO;
     if (ioctl(CAM->device_fd, VIDIOC_G_CTRL, &control) == -1)
@@ -552,12 +484,12 @@ bool CameraDemo::getAutoExposure()
 
 bool CameraDemo::getFlipHorizontal()
 {
-    // CAM->device_fd not yet opened
-    if (CAM->device_fd < 0) {
+    if (CAM->device_fd < 0)
+    {
         return false;
     }
     struct v4l2_control control;
-    std::memset(&control, 0, sizeof(control)); // set memory of control to all zeros (for idempotenty)
+    std::memset(&control, 0, sizeof(control));
 
     control.id = V4L2_CID_HFLIP;
     if (ioctl(CAM->device_fd, VIDIOC_G_CTRL, &control) == -1)
@@ -570,12 +502,12 @@ bool CameraDemo::getFlipHorizontal()
 
 bool CameraDemo::getFlipVertical()
 {
-    // CAM->device_fd not yet opened
-    if (CAM->device_fd < 0) {
+    if (CAM->device_fd < 0)
+    {
         return false;
     }
     struct v4l2_control control;
-    std::memset(&control, 0, sizeof(control)); // set memory of control to all zeros (for idempotenty)
+    std::memset(&control, 0, sizeof(control));
 
     control.id = V4L2_CID_VFLIP;
     if (ioctl(CAM->device_fd, VIDIOC_G_CTRL, &control) == -1)
@@ -588,12 +520,12 @@ bool CameraDemo::getFlipVertical()
 
 int CameraDemo::getExposure()
 {
-    // CAM->device_fd not yet opened
-    if (CAM->device_fd < 0) {
+    if (CAM->device_fd < 0)
+    {
         return 0;
     }
     struct v4l2_control control;
-    std::memset(&control, 0, sizeof(control)); // set memory of control to all zeros (for idempotenty)
+    std::memset(&control, 0, sizeof(control));
 
     control.id = V4L2_CID_EXPOSURE;
     if (ioctl(CAM->device_fd, VIDIOC_G_CTRL, &control) == -1)
@@ -604,47 +536,32 @@ int CameraDemo::getExposure()
     return control.value;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ################################### SLOTS ###################################
+// ################# SLOTS (Called from UI) #################
 void CameraDemo::setVideoSource(video_srcs value)
 {
     tUpdate.stop();
     cap.release();
 
-    if (value == ISP) {
+    if (value == ISP)
+    {
         CAM->video_src = ISP;
 
         std::cout << "pipeline: " << CAM->isp_pipeline << std::endl;
-        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER); // generate VideoCapture object
-        double fps = cap.get(cv::CAP_PROP_FPS); // get FPS // TBD: seems to be not real
+        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
+        double fps = cap.get(cv::CAP_PROP_FPS);
         qDebug() << "fps: " << fps;
         tUpdate.start(1000 / fps);
     }
-    else if (value == ISI) {
+    else if (value == ISI)
+    {
         CAM->video_src = ISI;
 
         std::cout << CAM->setup_pipeline_command << std::endl;
         CAM->setup_pipeline(); // setup pipeline every time ISP is switched to ISI
         sleep(1);
         std::cout << "pipeline: " << CAM->isi_pipeline << std::endl;
-        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER); // generate VideoCapture object
-        double fps = cap.get(cv::CAP_PROP_FPS); // get FPS // TBD: seems to be not real
+        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
+        double fps = cap.get(cv::CAP_PROP_FPS);
         qDebug() << "fps: " << fps;
         tUpdate.start(1000 / fps);
     }
@@ -653,10 +570,10 @@ void CameraDemo::setVideoSource(video_srcs value)
 
 void CameraDemo::setInterface(csi_interface value)
 {
-    if (value == CSI1) {
+    if (value == CSI1)
+    {
         CAM = &cam1;
         std::cout << "set to CSI1" << std::endl;
-        // TBD: one signal
         emit framesizeChanged();
         emit sensorChanged();
         emit autoExosureChanged();
@@ -667,10 +584,10 @@ void CameraDemo::setInterface(csi_interface value)
         emit videoSrcChanged();
         emit interfaceChanged();
     }
-    else if (value == CSI2) {
+    else if (value == CSI2)
+    {
         CAM = &cam2;
         std::cout << "set to CSI2" << std::endl;
-        // TBD: one signal
         emit framesizeChanged();
         emit sensorChanged();
         emit autoExosureChanged();
@@ -683,16 +600,15 @@ void CameraDemo::setInterface(csi_interface value)
     }
 }
 
-
 void CameraDemo::setAutoExposure(bool value)
 {
-    if (! CAM->sensor->hasAutoExposure) // Camera without auto exposures
+    if (!CAM->sensor->hasAutoExposure)
     {
         std::cout << "WARNING: This camera has no auto exposure" << std::endl;
         return;
     }
     struct v4l2_control control;
-    control.id = V4L2_CID_EXPOSURE_AUTO;    
+    control.id = V4L2_CID_EXPOSURE_AUTO;
     if (value)
     {
         control.value = V4L2_EXPOSURE_AUTO;
@@ -705,7 +621,7 @@ void CameraDemo::setAutoExposure(bool value)
 
     if (ioctl(CAM->device_fd, VIDIOC_S_CTRL, &control) == -1)
     {
-        std::cerr << "ERROR: setting auto exposure" << std::endl;
+        std::cerr << "ERROR: Can't set auto exposure" << std::endl;
     }
     emit autoExosureChanged();
 }
@@ -718,7 +634,7 @@ void CameraDemo::setExposure(int value)
 
     if (ioctl(CAM->device_fd, VIDIOC_S_CTRL, &control) == -1)
     {
-        std::cerr << ("ERROR: setting exposure") << std::endl;
+        std::cerr << ("ERROR: Can't set exposure") << std::endl;
     }
 }
 
@@ -730,7 +646,7 @@ void CameraDemo::setFlipVertical(bool value)
 
     if (ioctl(CAM->device_fd, VIDIOC_S_CTRL, &control) == -1)
     {
-        std::cerr << "ERROR: setting vertical flip" << std::endl;
+        std::cerr << "ERROR: Can't set vertical flip" << std::endl;
     }
 }
 
@@ -742,6 +658,6 @@ void CameraDemo::setFlipHorizontal(bool value)
 
     if (ioctl(CAM->device_fd, VIDIOC_S_CTRL, &control) == -1)
     {
-        std::cerr << "ERROR: setting horizontal flip" << std::endl;
+        std::cerr << "ERROR: Can't set horizontal flip" << std::endl;
     }
 }
