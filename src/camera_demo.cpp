@@ -50,6 +50,7 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent), cam1(1), cam2(2)
 
 CameraDemo::~CameraDemo()
 {
+    // TBD: do this properly for both cams
     close(CAM->device_fd);
     cap.release();
     tUpdate.stop();
@@ -151,8 +152,6 @@ int PhyCam::getSensor()
             std::getline(entityFile, sensor_name);
             entityFile.close();
         }
-
-        // TBD: GET COLOR FORMAT
         for (int i = 0; SENSORS[i].name != "---"; i++)
         {
             if (SENSORS[i].name == sensor_name)
@@ -286,7 +285,7 @@ void CameraDemo::openCamera()
         CAM = &cam1;
         STATUS = DUAL_CAM;
     }
-    if (cam1.status == READY)
+    else if (cam1.status == READY)
     {
         CAM = &cam1;
         STATUS = SINGLE_CAM;
@@ -326,15 +325,16 @@ void CameraDemo::openCamera()
         emit statusChanged();
         return;
     }
+    emit statusChanged();
 
     // Emit signals to update GUI
     emit framesizeChanged();
     emit sensorChanged();
-    emit autoExosureChanged();
+    emit autoExposureChanged();
+    emit hasAutoExposureChanged();
     emit flipVerticalChanged();
     emit flipHorizontalChanged();
     emit exposureChanged();
-    emit formatChanged();
     emit videoSrcChanged();
     emit interfaceChanged();
 
@@ -342,6 +342,7 @@ void CameraDemo::openCamera()
     cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
     double fps = cap.get(cv::CAP_PROP_FPS);
     tUpdate.start(1000 / fps);
+    CAM->status = ACTIVE;
 }
 
 void CameraDemo::updateFrame()
@@ -416,10 +417,6 @@ QString CameraDemo::getFramesize() const
     std::string ret = std::to_string(CAM->sensor->frame_width) + "x" + std::to_string(CAM->sensor->frame_height);
     return QString::fromStdString(ret);
 }
-QString CameraDemo::getFormat() const
-{
-    return "TBD";
-}
 QString CameraDemo::getInterfaceString() const
 {
 
@@ -481,6 +478,11 @@ bool CameraDemo::getAutoExposure()
         std::cerr << "ERROR: Unknown exposure mode" << std::endl;
         return false;
     }
+}
+
+bool CameraDemo::getHasAutoExposure()
+{
+    return CAM->sensor->hasAutoExposure;
 }
 
 bool CameraDemo::getFlipHorizontal()
@@ -546,7 +548,6 @@ void CameraDemo::setVideoSource(video_srcs value)
     if (value == ISP)
     {
         CAM->video_src = ISP;
-
         cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
         double fps = cap.get(cv::CAP_PROP_FPS);
         tUpdate.start(1000 / fps);
@@ -554,44 +555,52 @@ void CameraDemo::setVideoSource(video_srcs value)
     else if (value == ISI)
     {
         CAM->video_src = ISI;
-
         CAM->setup_pipeline(); // setup pipeline every time ISP is switched to ISI
-        sleep(1);
+        // sleep(1);
         cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
         double fps = cap.get(cv::CAP_PROP_FPS);
         tUpdate.start(1000 / fps);
     }
-    emit interfaceChanged();
+    emit videoSrcChanged();
 }
 
 void CameraDemo::setInterface(csi_interface value)
 {
+    CAM->status = READY;
     if (value == CSI1)
     {
         CAM = &cam1;
-        emit framesizeChanged();
-        emit sensorChanged();
-        emit autoExosureChanged();
-        emit flipVerticalChanged();
-        emit flipHorizontalChanged();
-        emit exposureChanged();
-        emit formatChanged();
-        emit videoSrcChanged();
-        emit interfaceChanged();
     }
     else if (value == CSI2)
     {
         CAM = &cam2;
-        emit framesizeChanged();
-        emit sensorChanged();
-        emit autoExosureChanged();
-        emit flipVerticalChanged();
-        emit flipHorizontalChanged();
-        emit exposureChanged();
-        emit formatChanged();
-        emit videoSrcChanged();
-        emit interfaceChanged();
     }
+
+    tUpdate.stop();
+    cap.release();
+    CAM->setup_pipeline();
+    // sleep(1);
+
+    if (CAM->video_src == ISP) {
+        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
+    }
+    else {
+        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
+    }
+    double fps = cap.get(cv::CAP_PROP_FPS);
+    std::cout << "fps: " << fps << std::endl;
+    tUpdate.start(1000 / fps);
+    CAM->status = ACTIVE;
+
+    emit framesizeChanged();
+    emit sensorChanged();
+    emit autoExposureChanged();
+    emit hasAutoExposureChanged();
+    emit flipVerticalChanged();
+    emit flipHorizontalChanged();
+    emit exposureChanged();
+    emit interfaceChanged();
+    emit videoSrcChanged();
 }
 
 void CameraDemo::setAutoExposure(bool value)
@@ -617,7 +626,7 @@ void CameraDemo::setAutoExposure(bool value)
     {
         std::cerr << "ERROR: Can't set auto exposure" << std::endl;
     }
-    emit autoExosureChanged();
+    emit autoExposureChanged();
 }
 
 void CameraDemo::setExposure(int value)

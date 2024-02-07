@@ -28,16 +28,14 @@ Page {
             cameraFrameProvider.updateImage(image)
         }
     }
+    // Component.onCompleted: {
+    //     cameraDemo.openCamera()
+    // }
 
     RowLayout {
         id: content
         spacing: PhyTheme.marginBig
         anchors.fill: parent
-        // height: 800
-        // width: Math.max(scrollView.width, implicitWidth)
-        // Layout.fillWidth: true
-        // Layout.fillHeight: true
-        // anchors.centerIn: parent
 
         ColumnLayout {
             Layout.topMargin: PhyTheme.marginBig
@@ -70,7 +68,6 @@ Page {
                 id: streamImage
                 Layout.fillHeight: true
                 Layout.fillWidth: true
-                // Layout.alignment: Qt.AlignVCenter
                 fillMode: Image.PreserveAspectFit
 
                 property bool counter: false
@@ -184,18 +181,9 @@ Page {
                     text: cameraDemo.framesize
                 }
             }
-            // // Color Format
-            // Row {
-            //     Label {
-            //         text: "Format: "
-            //     }
-            //     Label {
-            //         id: formatLabel
-            //         text: cameraDemo.format
-            //     }
-            // }
             // Sensor Controls
             Label {
+                Layout.topMargin: PhyTheme.marginSmall
                 Layout.fillHeight: true
                 text: "Sensor Controls: "
             }
@@ -225,9 +213,8 @@ Page {
                 id: autoExposureCheckbox
                 Layout.fillHeight: true
                 text: "Auto Exposure"
-                // TBD: separate cameraname and sensor
-                enabled: (!videoSourceSwitch.checked) ? 0 : 1; // TBD: disable if camera has no auto exposure
-                checked: (videoSourceSwitch.checked  && cameraDemo.autoExposure) ? 1 : 0;
+                enabled: (cameraDemo.videoSrc && cameraDemo.hasAutoExposure) // Enable only on ISI
+                checked: (cameraDemo.videoSrc && cameraDemo.hasAutoExposure && cameraDemo.autoExposure); // Can only be checked on ISI
                 onClicked: {
                     cameraDemo.setAutoExposure(autoExposureCheckbox.checked)
                 }
@@ -240,10 +227,11 @@ Page {
             Slider {
                 id: exposureSlider
                 Layout.fillHeight: true
-                enabled: !(autoExposureCheckbox.checked || aecCheckbox.checked)
+                // disable when isp or sensor Auto Exposure is enabled
+                enabled: !(cameraDemo.autoExposure || aecCheckbox.checked) // TBD: .checked statement
                 from: 0
                 value: cameraDemo.exposure
-                to: 1500
+                to: 3000
                 // to: 65535 // TBD: this is the original maximum but it is way too high
                 // maybe orient on auto_exposure_max
                 // step = 1
@@ -253,6 +241,7 @@ Page {
             }
             // ISP Controls
             Label {
+                Layout.topMargin: PhyTheme.marginSmall
                 Layout.fillHeight: true
                 text: "ISP Controls: "
             }
@@ -261,8 +250,8 @@ Page {
                 id: aecCheckbox
                 Layout.fillHeight: true
                 text: "ISP Auto Exposure"
-                enabled: (cameraDemo.videoSrc==0)  ? true : false
-                checked: (cameraDemo.videoSrc == 0) ? true : false
+                enabled: !cameraDemo.videoSrc
+                checked: !cameraDemo.videoSrc
                 onClicked: {
                     cameraDemo.setAec(aecCheckbox.checked)
                 }
@@ -273,8 +262,8 @@ Page {
                 id: awbCheckbox
                 Layout.fillHeight: true
                 text: "Auto White Balance"
-                enabled: (cameraDemo.videoSrc==0)  ? true : false
-                checked: (cameraDemo.videoSrc == 0) ? true : false
+                enabled: !cameraDemo.videoSrc
+                checked: !cameraDemo.videoSrc
                 onClicked: {
                     cameraDemo.setAwb(awbCheckbox.checked)
                 }
@@ -284,8 +273,8 @@ Page {
                 id: lscCheckbox
                 Layout.fillHeight: true
                 text: "Lens Shading Correction"
-                enabled: (cameraDemo.videoSrc==0)  ? true : false
-                checked: (cameraDemo.videoSrc == 0) ? true : false
+                enabled: !cameraDemo.videoSrc
+                checked: !cameraDemo.videoSrc
                 onClicked: {
                     cameraDemo.setLsc(lscCheckbox.checked)
                 }

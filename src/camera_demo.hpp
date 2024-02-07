@@ -111,15 +111,15 @@ class CameraDemo : public QObject
     Q_PROPERTY(QString framesize // Framesize
                    READ getFramesize
                        NOTIFY framesizeChanged);
-    Q_PROPERTY(QString format // Format
-                   READ getFormat
-                       NOTIFY formatChanged);
     Q_PROPERTY(int videoSrc // Video Source (ISP or ISI)
                    READ getVideoSrc
                        NOTIFY videoSrcChanged);
     Q_PROPERTY(bool autoExposure // Auto Exposure
                    READ getAutoExposure
-                       NOTIFY autoExosureChanged);
+                       NOTIFY autoExposureChanged);
+    Q_PROPERTY(bool hasAutoExposure // Auto Exposure availability on sensor
+                   READ getHasAutoExposure
+                       NOTIFY hasAutoExposureChanged);
     Q_PROPERTY(bool flipVertical // Flip Vertical
                    READ getFlipVertical
                        NOTIFY flipVerticalChanged);
@@ -165,11 +165,11 @@ signals:
     void newImage(QImage &);
     void framesizeChanged();
     void sensorChanged();
-    void autoExosureChanged();
+    void autoExposureChanged();
+    void hasAutoExposureChanged();
     void flipVerticalChanged();
     void flipHorizontalChanged();
     void exposureChanged();
-    void formatChanged();
     void videoSrcChanged();
     void interfaceChanged();
     void recommendedOverlaysChanged();
@@ -180,7 +180,6 @@ public slots:
     void openCamera();
     QString getCameraName() const;
     QString getFramesize() const;
-    QString getFormat() const;
     QString getRecommendedOverlays() const;
     QString getInterfaceString() const;
 
@@ -188,6 +187,7 @@ public slots:
     int getVideoSrc() const;
 
     bool getAutoExposure();
+    bool getHasAutoExposure();
     bool getFlipHorizontal();
     bool getFlipVertical();
 
