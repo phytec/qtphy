@@ -43,17 +43,6 @@ Sensor SENSORS[] = {
 
 };
 
-CameraDemo::CameraDemo(QObject *parent) : QObject(parent), cam1(1), cam2(2)
-{
-    connect(&tUpdate, &QTimer::timeout, this, &CameraDemo::updateFrame);
-}
-
-CameraDemo::~CameraDemo()
-{
-    tUpdate.stop();
-    cap.release();
-}
-
 PhyCam::PhyCam(int _interface) : csi_interface(_interface)
 {
     // Check if camera device can be found in /dev
@@ -173,6 +162,17 @@ int PhyCam::getSensor()
     }
 }
 
+CameraDemo::CameraDemo(QObject *parent) : QObject(parent), cam1(1), cam2(2)
+{
+    connect(&tUpdate, &QTimer::timeout, this, &CameraDemo::updateFrame);
+}
+
+CameraDemo::~CameraDemo()
+{
+    tUpdate.stop();
+    cap.release();
+}
+
 int CameraDemo::isp_ioctl(const char *cmd, json &jsonRequest, json &jsonResponse)
 {
     if (CAM->isp_fd < 0)
@@ -283,7 +283,6 @@ void CameraDemo::openCamera()
 {
     if (cam1.status == ACTIVE || cam2.status == ACTIVE)
     {
-        std::cout << "Reopen" << std::endl;
         return;
     }
     if (cam1.status == READY && cam2.status == READY)
@@ -593,7 +592,6 @@ void CameraDemo::setInterface(csi_interface value)
         cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
     }
     double fps = cap.get(cv::CAP_PROP_FPS);
-    std::cout << "fps: " << fps << std::endl;
     tUpdate.start(1000 / fps);
     CAM->status = ACTIVE;
 
@@ -612,7 +610,7 @@ void CameraDemo::setAutoExposure(bool value)
 {
     if (!CAM->sensor->hasAutoExposure)
     {
-        std::cout << "WARNING: This camera has no auto exposure" << std::endl;
+        std::cerr << "ERROR: This camera has no auto exposure" << std::endl;
         return;
     }
     struct v4l2_control control;
