@@ -56,6 +56,7 @@ extern Sensor SENSORS[];
 class PhyCam {
 public:
     PhyCam(const int _interface);
+    ~PhyCam();
 
     camera_status status = UNCONNECTED;
 

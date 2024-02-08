@@ -98,7 +98,7 @@ Page {
             Button {
                 id: startButton
                 Layout.fillHeight: true
-                text: "(Re)-Open"
+                text: "Open Camera"
                 onClicked: {
                     cameraDemo.openCamera()
                 }

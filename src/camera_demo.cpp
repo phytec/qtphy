@@ -50,10 +50,8 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent), cam1(1), cam2(2)
 
 CameraDemo::~CameraDemo()
 {
-    // TBD: do this properly for both cams
-    close(CAM->device_fd);
-    cap.release();
     tUpdate.stop();
+    cap.release();
 }
 
 PhyCam::PhyCam(int _interface) : csi_interface(_interface)
@@ -126,6 +124,11 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
     isi_pipeline = "v4l2src device=/dev/video-isi-csi" + std::to_string(csi_interface) + " ! video/x-bayer,format=grbg, " + framesize + " ! appsink";
 
     status = READY;
+}
+PhyCam::~PhyCam()
+{
+    close(device_fd);
+    close(isp_fd);
 }
 
 int PhyCam::setup_pipeline()
@@ -278,8 +281,11 @@ void CameraDemo::setAec(bool value)
 
 void CameraDemo::openCamera()
 {
-    cap.release();
-
+    if (cam1.status == ACTIVE || cam2.status == ACTIVE)
+    {
+        std::cout << "Reopen" << std::endl;
+        return;
+    }
     if (cam1.status == READY && cam2.status == READY)
     {
         CAM = &cam1;
@@ -419,7 +425,6 @@ QString CameraDemo::getFramesize() const
 }
 QString CameraDemo::getInterfaceString() const
 {
-
     std::string ret = "CSI" + std::to_string(CAM->csi_interface);
     if (CAM->port >= 0)
     {
