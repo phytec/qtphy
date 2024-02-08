@@ -48,7 +48,7 @@ Page {
                 id: errorDialog1
                 visible: (cameraDemo.status == 3) ? true : false
 
-                text: "Cannot open Camera!"
+                text: "Unconfigured camera found!"
                 informativeText: "Seems like a camera is connected but the wrong devicetree overlays have been selected.\n" +
                 "The detectCamera script recommends the following devicetree overlays:\n\n" + cameraDemo.recommendedOverlays + "\n\n" +
                 "Do you want to load these overlays and reboot?"

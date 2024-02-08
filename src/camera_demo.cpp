@@ -290,24 +290,11 @@ void CameraDemo::openCamera()
         CAM = &cam1;
         STATUS = DUAL_CAM;
     }
-    else if (cam1.status == READY)
-    {
-        CAM = &cam1;
-        STATUS = SINGLE_CAM;
-    }
-    else if (cam2.status == READY)
-    {
-        CAM = &cam2;
-        STATUS = SINGLE_CAM;
-    }
-    else
-    {
-        std::cerr << "ERROR: NO CAMERA FOUND" << std::endl;
-
+    else {
         QProcess process;
         QStringList arguments;
         arguments << "detectCamera"
-                  << "-m";
+                << "-m";
 
         process.start("/bin/sh", arguments);
         process.waitForFinished(-1);
@@ -321,18 +308,32 @@ void CameraDemo::openCamera()
 
         if (returnCode == 0)
         {
+            // Additional cameras found (reload overlays to use them)
             STATUS = WRONG_OVERLAYS;
+            emit statusChanged();
+            return;
         }
-        else
+        // else if (returnCode == 1) // no additional camera found
+        else if (returnCode == 2)
         {
+            // No camera connected
             STATUS = NO_CAM;
         }
-        emit statusChanged();
-        return;
+
+        if (cam1.status == READY)
+        {
+            STATUS = SINGLE_CAM;
+            CAM = &cam1;
+        }
+        else if (cam2.status == READY)
+        {
+            STATUS = SINGLE_CAM;
+            CAM = &cam2;
+        }
     }
-    emit statusChanged();
 
     // Emit signals to update GUI
+    emit statusChanged();
     emit framesizeChanged();
     emit sensorChanged();
     emit autoExposureChanged();
