@@ -290,11 +290,12 @@ void CameraDemo::openCamera()
         CAM = &cam1;
         STATUS = DUAL_CAM;
     }
-    else {
+    else
+    {
         QProcess process;
         QStringList arguments;
         arguments << "detectCamera"
-                << "-m";
+                  << "-m";
 
         process.start("/bin/sh", arguments);
         process.waitForFinished(-1);
@@ -380,12 +381,6 @@ void CameraDemo::reloadOverlays()
 OpencvImageProvider::OpencvImageProvider()
     : QQuickImageProvider(QQuickImageProvider::Image)
 {
-    // QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    // QGuiApplication app(argc, argv);
-    // QQmlApplicationEngine engine;
-
-
-
     image = QImage(1280, 800, QImage::Format_RGB888);
     image.fill(QColor("blue"));
 }
@@ -457,7 +452,7 @@ bool CameraDemo::getAutoExposure()
     {
         return false;
     }
-    if (!CAM->sensor->hasAutoExposure) 
+    if (!CAM->sensor->hasAutoExposure)
     {
         return 0;
     }
@@ -586,10 +581,12 @@ void CameraDemo::setInterface(csi_interface value)
     CAM->setup_pipeline();
     // sleep(1);
 
-    if (CAM->video_src == ISP) {
+    if (CAM->video_src == ISP)
+    {
         cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
     }
-    else {
+    else
+    {
         cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
     }
     double fps = cap.get(cv::CAP_PROP_FPS);
