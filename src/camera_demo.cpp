@@ -43,7 +43,7 @@ Sensor SENSORS[] = {
 
 };
 
-PhyCam::PhyCam(int _interface) : csi_interface(_interface)
+PhyCam::PhyCam(int _interface, Phytec_board _host_hardware) : csi_interface(_interface), host_hardware(_host_hardware)
 {
     // Check if camera device can be found in /dev
     device = "/dev/cam-csi" + std::to_string(csi_interface);
@@ -66,13 +66,16 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
         status = UNCONNECTED;
         return;
     }
-    // Check if isp and isi overlays are loaded
-    if ((access(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0) ||
-        (access(("/dev/video-isi-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0))
+    if (host_hardware == IMX8MP_POLLUX)
     {
-        std::cerr << "ERROR: Please load isi and isp overlay for your camera" << std::endl;
-        status = UNCONNECTED;
-        return;
+        // Check if isp and isi overlays are loaded
+        if ((access(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0) ||
+            (access(("/dev/video-isi-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0))
+        {
+            std::cerr << "ERROR: Please load isi and isp overlay for your camera" << std::endl;
+            status = UNCONNECTED;
+            return;
+        }
     }
     // Open device_fd
     device_fd = open(device.c_str(), O_RDWR);
@@ -82,13 +85,16 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
         status = ERROR;
         return;
     }
-    // Open isp_fd
-    isp_fd = open(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), O_RDWR | O_NONBLOCK, 0);
-    if (isp_fd == -1)
+    if (host_hardware == IMX8MP_POLLUX)
     {
-        std::cerr << "ERROR: Could not open isp fd" << std::endl;
-        status = ERROR;
-        return;
+        // Open isp_fd
+        isp_fd = open(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), O_RDWR | O_NONBLOCK, 0);
+        if (isp_fd == -1)
+        {
+            std::cerr << "ERROR: Could not open isp fd" << std::endl;
+            status = ERROR;
+            return;
+        }
     }
     // Get sensor of connected camera (includes framesize etc.)
     if (getSensor() < 0)
@@ -109,9 +115,16 @@ PhyCam::PhyCam(int _interface) : csi_interface(_interface)
 
     // Construct gstreamer pipelines:
     std::string framesize = "width=" + std::to_string(sensor->frame_width) + ", height=" + std::to_string(sensor->frame_height);
-    isp_pipeline = "v4l2src device=/dev/video-isp-csi" + std::to_string(csi_interface) + " ! video/x-raw,format=YUY2, " + framesize + " ! appsink";
-    isi_pipeline = "v4l2src device=/dev/video-isi-csi" + std::to_string(csi_interface) + " ! video/x-bayer,format=grbg, " + framesize + " ! appsink";
-
+    if (host_hardware == IMX8MP_POLLUX)
+    {
+        isp_pipeline = "v4l2src device=/dev/video-isp-csi" + std::to_string(csi_interface) + " ! video/x-raw,format=YUY2, " + framesize + " ! appsink";
+        isi_pipeline = "v4l2src device=/dev/video-isi-csi" + std::to_string(csi_interface) + " ! video/x-bayer,format=grbg, " + framesize + " ! appsink";
+    }
+    else if (host_hardware == IMX8MM_POLIS)
+    {
+        isi_pipeline = "v4l2src device=/dev/video-csi" + std::to_string(csi_interface) + " ! video/x-bayer,format=grbg, " + framesize + " ! appsink";
+        isp_pipeline = "";
+    }
     status = READY;
 }
 PhyCam::~PhyCam()
@@ -162,15 +175,59 @@ int PhyCam::getSensor()
     }
 }
 
-CameraDemo::CameraDemo(QObject *parent) : QObject(parent), cam1(1), cam2(2)
+CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
 {
     connect(&tUpdate, &QTimer::timeout, this, &CameraDemo::updateFrame);
+    char hostname[256];
+    if (gethostname(hostname, sizeof(hostname)) == 0)
+    {
+        std::string hostStr(hostname);
+
+        if (hostStr.find("phyboard-polis-imx8mm") != std::string::npos)
+        {
+            host_hardware = IMX8MM_POLIS;
+            cam1 = new PhyCam(1, host_hardware);
+            cam2 = cam1;
+            CAM = cam1;
+            emit hostHardwareChanged();
+            return;
+        }
+        else if (hostStr.find("phyboard-pollux-imx8mp") != std::string::npos)
+        {
+            host_hardware = IMX8MP_POLLUX;
+            cam1 = new PhyCam(1, host_hardware);
+            cam2 = new PhyCam(2, host_hardware);
+            CAM = cam1;
+            emit hostHardwareChanged();
+        }
+        else
+        {
+            std::cerr << "ERROR: Unknown hostname, your hardware is not supported by the qtphy demo" << std::endl;
+            // exit(-1);
+            // TBD: return to start page
+        }
+    }
+    else
+    {
+        std::cerr << "ERROR: Unable to get hostname" << std::endl;
+        // exit(-1);
+        // TBD: return to start page
+    }
 }
 
 CameraDemo::~CameraDemo()
 {
     tUpdate.stop();
     cap.release();
+    if (cam2 == cam1)
+    {
+        delete cam1;
+    }
+    else
+    {
+        delete cam1;
+        delete cam2;
+    }
 }
 
 int CameraDemo::isp_ioctl(const char *cmd, json &jsonRequest, json &jsonResponse)
@@ -281,13 +338,13 @@ void CameraDemo::setAec(bool value)
 
 void CameraDemo::openCamera()
 {
-    if (cam1.status == ACTIVE || cam2.status == ACTIVE)
+    if (cam1->status == ACTIVE || cam2->status == ACTIVE)
     {
         return;
     }
-    if (cam1.status == READY && cam2.status == READY)
+    if (cam1->status == READY && cam2->status == READY)
     {
-        CAM = &cam1;
+        CAM = cam1;
         STATUS = DUAL_CAM;
     }
     else
@@ -321,17 +378,32 @@ void CameraDemo::openCamera()
             STATUS = NO_CAM;
         }
 
-        if (cam1.status == READY)
+        if (cam1->status == READY)
         {
             STATUS = SINGLE_CAM;
-            CAM = &cam1;
+            CAM = cam1;
         }
-        else if (cam2.status == READY)
+        else if (cam2->status == READY)
         {
             STATUS = SINGLE_CAM;
-            CAM = &cam2;
+            CAM = cam2;
         }
     }
+
+    // Start capturing video
+    if (host_hardware == IMX8MP_POLLUX)
+    {
+        CAM->video_src = ISP;
+        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
+    }
+    else
+    {
+        CAM->video_src = ISI;
+        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
+    }
+    double fps = cap.get(cv::CAP_PROP_FPS);
+    tUpdate.start(1000 / fps);
+    CAM->status = ACTIVE;
 
     // Emit signals to update GUI
     emit statusChanged();
@@ -345,11 +417,6 @@ void CameraDemo::openCamera()
     emit videoSrcChanged();
     emit interfaceChanged();
 
-    // Start capturing video
-    cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
-    double fps = cap.get(cv::CAP_PROP_FPS);
-    tUpdate.start(1000 / fps);
-    CAM->status = ACTIVE;
 }
 
 void CameraDemo::updateFrame()
@@ -441,7 +508,7 @@ QString CameraDemo::getRecommendedOverlays() const
     return RECOMMENDED_OVERLAYS;
 }
 
-int CameraDemo::getStatus()
+Status CameraDemo::getStatus()
 {
     return STATUS;
 }
@@ -539,8 +606,13 @@ int CameraDemo::getExposure()
     return control.value;
 }
 
+int CameraDemo::getHostHardware()
+{
+    return host_hardware;
+}
+
 // ################# SLOTS (Called from UI) #################
-void CameraDemo::setVideoSource(video_srcs value)
+void CameraDemo::setVideoSource(Video_srcs value)
 {
     tUpdate.stop();
     cap.release();
@@ -564,20 +636,29 @@ void CameraDemo::setVideoSource(video_srcs value)
     emit videoSrcChanged();
 }
 
-void CameraDemo::setInterface(csi_interface value)
+void CameraDemo::setInterface(CSI_interface value)
 {
-    CAM->status = READY;
-    if (value == CSI1)
+    if (CAM->status == ACTIVE)
     {
-        CAM = &cam1;
-    }
-    else if (value == CSI2)
-    {
-        CAM = &cam2;
+        tUpdate.stop();
+        cap.release();
+        CAM->status = READY;
     }
 
-    tUpdate.stop();
-    cap.release();
+    if (value == CSI1 && cam1->status == READY)
+    {
+        CAM = cam1;
+    }
+    else if (value == CSI2 && cam2->status == READY)
+    {
+        CAM = cam2;
+    }
+    else
+    {
+        std::cerr << "ERROR: Camera not ready" << std::endl;
+        return;
+    }
+
     CAM->setup_pipeline();
     // sleep(1);
 

@@ -33,10 +33,21 @@ namespace fs = std::filesystem;
 
 #define V4L2_CID_VIV_EXTCTRL 0x98F901
 
-enum video_srcs{ISP, ISI};
-enum camera_status{ACTIVE, READY, UNCONNECTED, ERROR};
-enum status{SINGLE_CAM, DUAL_CAM, NO_CAM, WRONG_OVERLAYS};
-enum csi_interface{CSI1, CSI2};
+namespace EnumNamespace
+{
+    Q_NAMESPACE
+    enum Video_srcs{ISP, ISI};
+    enum Camera_status{ACTIVE, READY, UNCONNECTED, ERROR};
+    enum Status{SINGLE_CAM, DUAL_CAM, NO_CAM, WRONG_OVERLAYS};
+    enum CSI_interface{CSI1, CSI2};
+    enum Phytec_board{IMX8MM_POLIS, IMX8MP_POLLUX};
+    Q_ENUM_NS(Video_srcs);
+    Q_ENUM_NS(Camera_status);
+    Q_ENUM_NS(Status);
+    Q_ENUM_NS(CSI_interface);
+    Q_ENUM_NS(Phytec_board);
+}
+using namespace EnumNamespace;
 
 struct Sensor {
     std::string camera_name;
@@ -55,20 +66,22 @@ extern Sensor SENSORS[];
 
 class PhyCam {
 public:
-    PhyCam(const int _interface);
+    PhyCam(const int _interface, Phytec_board _host_hardware);
+    PhyCam() {};
     ~PhyCam();
 
-    camera_status status = UNCONNECTED;
+    Camera_status status = UNCONNECTED;
 
     std::string device =  ""; // /dev/cam-csi1-port0   (CAM)
     int device_fd = -1; // file descriptor of device (subdevFd)
     int isp_fd = -1;
 
+    Phytec_board host_hardware = IMX8MM_POLIS;
     int csi_interface = -1;
     int port = -1;
 
     Sensor *sensor = &SENSORS[0];
-    video_srcs video_src = ISP;
+    Video_srcs video_src = ISP;
     cv::VideoCapture cap;
     std::string setup_pipeline_command = "";
     std::string isp_pipeline = "";
@@ -135,9 +148,13 @@ class CameraDemo : public QObject
                    READ getRecommendedOverlays
                        NOTIFY recommendedOverlaysChanged);
 
-    Q_PROPERTY(int status // No Camera Found
+    Q_PROPERTY(Status status // No Camera Found
                 READ getStatus
                     NOTIFY statusChanged);
+
+    Q_PROPERTY(int hostHardware // Host Board (polis-imx8mm / pollux-imx8mp)
+                READ getHostHardware
+                    NOTIFY hostHardwareChanged);
 
 public:
     CameraDemo(QObject *parent = nullptr);
@@ -150,20 +167,19 @@ private:
     cv::Mat frame;
     cv::VideoCapture cap;
 
-    PhyCam cam1;
-    PhyCam cam2;
-    PhyCam* CAM = &cam1; // TBD: add default cam with empty strings
+    Phytec_board host_hardware;
+    PhyCam* cam1 = nullptr;
+    PhyCam* cam2 = nullptr;
+    PhyCam* CAM = nullptr;
 
-    int tmp = 0;
-
-    status STATUS;
-    // int ERROR = -1;
+    Status STATUS = SINGLE_CAM;
     QString RECOMMENDED_OVERLAYS = "";
 
     int isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse);
 
 signals:
     void newImage(QImage &);
+
     void framesizeChanged();
     void sensorChanged();
     void autoExposureChanged();
@@ -176,6 +192,7 @@ signals:
     void recommendedOverlaysChanged();
     void statusChanged();
     void csiPortChanged();
+    void hostHardwareChanged();
 
 public slots:
     void openCamera();
@@ -193,15 +210,16 @@ public slots:
     bool getFlipVertical();
 
     int getExposure();
-    int getStatus();
+    Status getStatus();
+    int getHostHardware();
 
     void setAutoExposure(bool value);
     void setFlipVertical(bool value);
     void setFlipHorizontal(bool value);
     void setExposure(int value);
 
-    void setVideoSource(video_srcs value);
-    void setInterface(csi_interface value);
+    void setVideoSource(Video_srcs value);
+    void setInterface(CSI_interface value);
 
     void setDwe(bool value);
     void setAwb(bool value);

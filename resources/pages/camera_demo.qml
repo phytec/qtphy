@@ -11,6 +11,7 @@ import Phytec.CameraDemo 1.0
 import PhyTheme 1.0
 import QtMultimedia
 import "../controls"
+import Phytec.CameraDemo.Enums 1.0
 
 Page {
     header: PhyToolBar {
@@ -46,7 +47,7 @@ Page {
 
             MessageDialog {
                 id: errorDialog1
-                visible: (cameraDemo.status == 3) ? true : false
+                visible: (cameraDemo.status == EnumNamespace.WRONG_OVERLAYS) ? true : false
 
                 text: "Unconfigured camera found!"
                 informativeText: "Seems like a camera is connected but the wrong devicetree overlays have been selected.\n" +
@@ -58,7 +59,7 @@ Page {
 
             MessageDialog {
                 id: errorDialog2
-                visible: (cameraDemo.status == 2) ? true : false
+                visible: (cameraDemo.status == EnumNamespace.NO_CAM) ? true : false
 
                 text: "No Camera Found!"
                 informativeText: "No camera found on the CSI interfaces of the board!"
@@ -106,6 +107,7 @@ Page {
             }
             RowLayout {
                 Layout.fillHeight: true
+                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
 
                 Label {
                     text: "ISP"
@@ -133,7 +135,7 @@ Page {
                 Switch {
                     id: interfaceSwitch
                     checked: (cameraDemo.interface == 2) ? 1 : 0// TBD enum
-                    enabled: (cameraDemo.status == 1) ? 1 : 0 // TBD enum
+                    enabled: (cameraDemo.status == EnumNamespace.DUAL_CAM) ? 1 : 0 // TBD enum
 
                     onCheckedChanged: {
                         cameraDemo.setInterface(checked)
@@ -241,6 +243,7 @@ Page {
             }
             // ISP Controls
             Label {
+                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
                 Layout.topMargin: PhyTheme.marginSmall
                 Layout.fillHeight: true
                 text: "ISP Controls: "
@@ -248,6 +251,7 @@ Page {
             // Auto Exposure (ISP)
             CheckBox {
                 id: aecCheckbox
+                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
                 Layout.fillHeight: true
                 text: "ISP Auto Exposure"
                 enabled: !cameraDemo.videoSrc
@@ -260,6 +264,7 @@ Page {
             // Auto White Balance
             CheckBox {
                 id: awbCheckbox
+                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
                 Layout.fillHeight: true
                 text: "Auto White Balance"
                 enabled: !cameraDemo.videoSrc
@@ -271,6 +276,7 @@ Page {
             // Lens Shading Correction
             CheckBox {
                 id: lscCheckbox
+                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
                 Layout.fillHeight: true
                 text: "Lens Shading Correction"
                 enabled: !cameraDemo.videoSrc

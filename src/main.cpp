@@ -64,6 +64,14 @@ int main(int argc, char *argv[])
         enabledPages.append(settings.value("name").toString());
     }
 
+    qmlRegisterUncreatableMetaObject(
+        EnumNamespace::staticMetaObject,
+        "Phytec.CameraDemo.Enums",
+        1, 0,
+        "EnumNamespace",
+        "Error: only enums"
+    );
+
     qmlRegisterSingletonType<DeviceInfo>("Phytec.DeviceInfo", 1, 0, "DeviceInfo",
                                          DeviceInfo::singletontypeProvider);
     qmlRegisterType<Rauc>("Phytec.Rauc", 1, 0, "Rauc");
