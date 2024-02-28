@@ -31,7 +31,7 @@
 
 #include "camera_demo.hpp"
 
-#include "json.hpp"
+#include <json.hpp>
 using json = nlohmann::json;
 
 Sensor SENSORS[] = {
