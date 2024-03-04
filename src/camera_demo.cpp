@@ -38,12 +38,18 @@ Sensor SENSORS[] = {
     {"", "", false, 0, 0, 0, 0, 0, 0},                          // default
     {"VM016", "ar0144", true, 1280, 800, 1280, 800, 0, 0},      // vm016
     {"VM017", "ar0521", false, 2560, 1440, 1280, 720, 16, 252}, // vm017
-    {"VM020", "ar0234", true, 2560, 1440, 1280, 720, 16, 252},  // vm020 (TBD)
+    {"VM020", "ar0234", true, 2560, 1440, 1280, 720, 16, 252},  // vm020
     {"---", "---", false, 0, 0, 0, 0, 0, 0}                     // Sentinel value to indicate the end
 
 };
 
-PhyCam::PhyCam(int _interface, Phytec_board _host_hardware) : csi_interface(_interface), host_hardware(_host_hardware)
+Host_hardware HOST_HARDWARE[] = {
+    {"phyboard-pollux-imx8mp", 1, 1, 1, 1}, // phyBOARD-Pollux
+    {"phyboard-polis-imx8mm", 0, 1, 0, 0},  // phyBOARD-Polis
+    {"---", 0, 0, 0, 0}                     // Sentinel value to indicate the end
+};
+
+PhyCam::PhyCam(int _interface, Host_hardware *_host_hardware) : csi_interface(_interface), host_hardware(_host_hardware)
 {
     // Check if camera device can be found in /dev
     device = "/dev/cam-csi" + std::to_string(csi_interface);
@@ -66,17 +72,42 @@ PhyCam::PhyCam(int _interface, Phytec_board _host_hardware) : csi_interface(_int
         status = UNCONNECTED;
         return;
     }
-    if (host_hardware == IMX8MP_POLLUX)
+
+    // Check if ISP is available
+    if (host_hardware->hasISP)
     {
-        // Check if isp and isi overlays are loaded
-        if ((access(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0) ||
-            (access(("/dev/video-isi-csi" + std::to_string(csi_interface)).c_str(), F_OK) != 0))
+        if ((access(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), F_OK) == 0))
         {
-            std::cerr << "ERROR: Please load isi and isp overlay for your camera" << std::endl;
-            status = UNCONNECTED;
-            return;
+            ispAvailable = true;
+        }
+        else
+        {
+            ispAvailable = false;
         }
     }
+    else
+    {
+        ispAvailable = false;
+    }
+
+    // Check if ISI is available
+    if (host_hardware->hasISI)
+    {
+        if ((access(("/dev/video-isi-csi" + std::to_string(csi_interface)).c_str(), F_OK) == 0))
+        {
+            isiAvailable = true;
+        }
+        else
+        {
+            isiAvailable = false;
+        }
+    }
+    else
+    {
+        isiAvailable = false;
+    }
+    // ---- Move this to CameraDemo Constrructor
+
     // Open device_fd
     device_fd = open(device.c_str(), O_RDWR);
     if (device_fd == -1)
@@ -85,9 +116,9 @@ PhyCam::PhyCam(int _interface, Phytec_board _host_hardware) : csi_interface(_int
         status = ERROR;
         return;
     }
-    if (host_hardware == IMX8MP_POLLUX)
+    // Open isp_fd
+    if (ispAvailable)
     {
-        // Open isp_fd
         isp_fd = open(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), O_RDWR | O_NONBLOCK, 0);
         if (isp_fd == -1)
         {
@@ -96,7 +127,7 @@ PhyCam::PhyCam(int _interface, Phytec_board _host_hardware) : csi_interface(_int
             return;
         }
     }
-    // Get sensor of connected camera (includes framesize etc.)
+    // Get sensor of connected camera (includes framesize, format, pixelrate etc.)
     if (getSensor() < 0)
     {
         std::cerr << "ERROR: Failed to get sensor" << std::endl;
@@ -115,14 +146,23 @@ PhyCam::PhyCam(int _interface, Phytec_board _host_hardware) : csi_interface(_int
 
     // Construct gstreamer pipelines:
     std::string framesize = "width=" + std::to_string(sensor->frame_width) + ", height=" + std::to_string(sensor->frame_height);
-    if (host_hardware == IMX8MP_POLLUX)
+    std::string isiFormat;
+    if (isColor)
+    {
+        isiFormat = "video/x-bayer,format=grbg, ";
+    }
+    else
+    {
+        isiFormat = "video/x-raw,format=GRAY8,depth=8, ";
+    }
+    if (host_hardware->hasDualCam)
     {
         isp_pipeline = "v4l2src device=/dev/video-isp-csi" + std::to_string(csi_interface) + " ! video/x-raw,format=YUY2, " + framesize + " ! appsink";
-        isi_pipeline = "v4l2src device=/dev/video-isi-csi" + std::to_string(csi_interface) + " ! video/x-bayer,format=grbg, " + framesize + " ! appsink";
+        isi_pipeline = "v4l2src device=/dev/video-isi-csi" + std::to_string(csi_interface) + " ! " + isiFormat + framesize + " ! appsink";
     }
-    else if (host_hardware == IMX8MM_POLIS)
+    else
     {
-        isi_pipeline = "v4l2src device=/dev/video-csi" + std::to_string(csi_interface) + " ! video/x-bayer,format=grbg, " + framesize + " ! appsink";
+        isi_pipeline = "v4l2src device=/dev/video-csi" + std::to_string(csi_interface) + " ! " + isiFormat + framesize + " ! appsink";
         isp_pipeline = "";
     }
     status = READY;
@@ -144,24 +184,74 @@ int PhyCam::getSensor()
     ssize_t len = readlink(device.c_str(), v4l_subdev, sizeof(v4l_subdev) - 1);
     if (len != -1)
     {
+        // get sensor name from sysfs
         v4l_subdev[len] = '\0';
         std::string entityPath = "/sys/class/video4linux/";
         entityPath += v4l_subdev;
         entityPath += "/device/name";
-
         std::ifstream entityFile(entityPath);
         std::string sensor_name;
-
         if (entityFile.is_open())
         {
             std::getline(entityFile, sensor_name);
             entityFile.close();
         }
+        // find sensor in SENSORS
         for (int i = 0; SENSORS[i].name != "---"; i++)
         {
             if (SENSORS[i].name == sensor_name)
             {
                 sensor = &SENSORS[i];
+
+                // Get color format:
+                struct v4l2_subdev_format fmt = {};
+                fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+                fmt.pad = 0;
+                if (ioctl(device_fd, VIDIOC_SUBDEV_G_FMT, &fmt) == -1)
+                {
+                    std::cerr << "ERROR: Failed to get format from subdev" << std::endl;
+                    return errno;
+                }
+                if (fmt.format.code == MEDIA_BUS_FMT_Y8_1X8 || fmt.format.code == MEDIA_BUS_FMT_Y12_1X12)
+                {
+                    isColor = false;
+                }
+                else
+                {
+                    isColor = true;
+                }
+
+                // Get pixel rate (needed to calculate exposure time)
+                // TODO Get pixel rate (somehow does not work with ioctl)
+                // std::memset(&control, 0, sizeof(control));
+                // control.id = V4L2_CID_PIXEL_RATE;
+                // if (ioctl(CAM->device_fd, VIDIOC_G_CTRL, &control) == -1)
+                // {
+                //     std::cerr << "ERROR: Failed to get pixel rate control: " << strerror(errno) << std::endl;
+                // }
+                // int64_t pixel_rate = control.value;
+
+                // TODO: workaround for getting pixel rate
+                // Execute vl2-ctl command to get pixel rate
+                QProcess process;
+                QStringList arguments;
+                arguments << "-d" << QString::fromStdString(device) << "-C"
+                          << "pixel_rate";
+                process.start("v4l2-ctl", arguments);
+                process.waitForFinished(-1);
+                QString output = process.readAllStandardOutput();
+                // int returnCode = process.exitCode();
+                // Extract the number from the output
+                QString numberStr = output.split(":").last().trimmed();
+                bool conversionOk;
+                pixel_rate = numberStr.toInt(&conversionOk);
+                // Check if conversion was successful
+                if (!conversionOk)
+                {
+                    std::cerr << "ERROR: Unable to convert pixel rate to integer" << std::endl;
+                    return 0;
+                }
+
                 return 0;
             }
         }
@@ -183,28 +273,33 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
     {
         std::string hostStr(hostname);
 
-        if (hostStr.find("phyboard-polis-imx8mm") != std::string::npos)
+        for (int i = 0; HOST_HARDWARE[i].hostname != "---"; i++)
         {
-            host_hardware = IMX8MM_POLIS;
-            cam1 = new PhyCam(1, host_hardware);
-            cam2 = cam1;
-            CAM = cam1;
-            emit hostHardwareChanged();
-            return;
-        }
-        else if (hostStr.find("phyboard-pollux-imx8mp") != std::string::npos)
-        {
-            host_hardware = IMX8MP_POLLUX;
-            cam1 = new PhyCam(1, host_hardware);
-            cam2 = new PhyCam(2, host_hardware);
-            CAM = cam1;
-            emit hostHardwareChanged();
-        }
-        else
-        {
-            std::cerr << "ERROR: Unknown hostname, your hardware is not supported by the qtphy demo" << std::endl;
-            // exit(-1);
-            // TBD: return to start page
+            if (hostStr.find(HOST_HARDWARE[i].hostname) != std::string::npos)
+            {
+                host_hardware = &HOST_HARDWARE[i];
+                emit hostHardwareChanged();
+                if (host_hardware->hasDualCam)
+                {
+
+                    cam1 = new PhyCam(1, host_hardware);
+                    cam2 = new PhyCam(2, host_hardware);
+                    CAM = cam1;
+                }
+                else
+                {
+                    cam1 = new PhyCam(1, host_hardware);
+                    cam2 = cam1;
+                    CAM = cam1;
+                }
+                emit sensorChanged();
+            }
+            if (HOST_HARDWARE[i].hostname == "---")
+            {
+                std::cerr << "ERROR: Unknown hostname, your hardware is not supported by the qtphy demo" << std::endl;
+                // exit(-1);
+                // TBD: return to start page
+            }
         }
     }
     else
@@ -213,6 +308,62 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
         // exit(-1);
         // TBD: return to start page
     }
+
+    // Check available cameras
+    if (cam1->status == READY && cam2->status == READY)
+    {
+        CAM = cam1;
+        host_hardware->dualCamAvailable = true;
+    }
+    else
+    {
+        host_hardware->dualCamAvailable = false;
+        if (cam1->status == READY)
+        {
+            CAM = cam1;
+        }
+        else if (cam2->status == READY)
+        {
+            CAM = cam2;
+        }
+        detectCameras();
+    }
+    emit interfaceChanged();
+
+    // Warn user when ISP or ISI is misconfigured (overlas not loaded)
+    if (host_hardware->hasISP && ((cam1->status == READY && cam1->ispAvailable == false) ||
+                                  (cam2->status == READY && cam2->ispAvailable == false)))
+    {
+        if (RECOMMENDED_OVERLAYS.isEmpty())
+        {
+            detectCameras();
+        }
+        STATUS = ISP_UNAVAILABLE;
+        emit statusChanged();
+    }
+    if (host_hardware->hasISI && ((cam1->status == READY && cam1->isiAvailable == false) ||
+                                  (cam2->status == READY && cam2->isiAvailable == false)))
+    {
+        if (RECOMMENDED_OVERLAYS.isEmpty())
+        {
+            detectCameras();
+        }
+        STATUS = ISI_UNAVAILABLE;
+        emit statusChanged();
+    }
+
+    // select video source
+    if (CAM->ispAvailable)
+    {
+        CAM->video_src = ISP;
+        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER); // TODO: this takes long and delays loading of the UI
+    }
+    else
+    {
+        CAM->video_src = ISI;
+        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER); // TODO: this takes long and delays loading of the UI
+    }
+    emit videoSrcChanged(); // OK // TODO: this takes long and delays loading of the UI
 }
 
 CameraDemo::~CameraDemo()
@@ -227,6 +378,35 @@ CameraDemo::~CameraDemo()
     {
         delete cam1;
         delete cam2;
+    }
+}
+
+void CameraDemo::detectCameras()
+{
+    // Execute detectCamera script to check if additional cameras are connected
+    QProcess process;
+    QStringList arguments;
+    arguments << "detectCamera"
+                << "-m";
+    process.start("/bin/sh", arguments);
+    process.waitForFinished(-1);
+    QString output = process.readAllStandardOutput();
+    int returnCode = process.exitCode();
+    RECOMMENDED_OVERLAYS = output;
+    emit recommendedOverlaysChanged();
+
+    if (returnCode == 0)
+    {
+        // Additional cameras found (reload overlays to use them)
+        STATUS = WRONG_OVERLAYS;
+        emit statusChanged();
+        return;
+    }
+    // else if (returnCode == 1) // no additional camera found
+    else if (returnCode == 2)
+    {
+        // No camera connected
+        STATUS = NO_CAM;
     }
 }
 
@@ -342,81 +522,11 @@ void CameraDemo::openCamera()
     {
         return;
     }
-    if (cam1->status == READY && cam2->status == READY)
-    {
-        CAM = cam1;
-        STATUS = DUAL_CAM;
-    }
-    else
-    {
-        QProcess process;
-        QStringList arguments;
-        arguments << "detectCamera"
-                  << "-m";
-
-        process.start("/bin/sh", arguments);
-        process.waitForFinished(-1);
-
-        QString output = process.readAllStandardOutput();
-        int returnCode = process.exitCode();
-
-        RECOMMENDED_OVERLAYS = output;
-
-        emit recommendedOverlaysChanged();
-
-        if (returnCode == 0)
-        {
-            // Additional cameras found (reload overlays to use them)
-            STATUS = WRONG_OVERLAYS;
-            emit statusChanged();
-            return;
-        }
-        // else if (returnCode == 1) // no additional camera found
-        else if (returnCode == 2)
-        {
-            // No camera connected
-            STATUS = NO_CAM;
-        }
-
-        if (cam1->status == READY)
-        {
-            STATUS = SINGLE_CAM;
-            CAM = cam1;
-        }
-        else if (cam2->status == READY)
-        {
-            STATUS = SINGLE_CAM;
-            CAM = cam2;
-        }
-    }
 
     // Start capturing video
-    if (host_hardware == IMX8MP_POLLUX)
-    {
-        CAM->video_src = ISP;
-        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
-    }
-    else
-    {
-        CAM->video_src = ISI;
-        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
-    }
     double fps = cap.get(cv::CAP_PROP_FPS);
     tUpdate.start(1000 / fps);
     CAM->status = ACTIVE;
-
-    // Emit signals to update GUI
-    emit statusChanged();
-    emit framesizeChanged();
-    emit sensorChanged();
-    emit autoExposureChanged();
-    emit hasAutoExposureChanged();
-    emit flipVerticalChanged();
-    emit flipHorizontalChanged();
-    emit exposureChanged();
-    emit videoSrcChanged();
-    emit interfaceChanged();
-
 }
 
 void CameraDemo::updateFrame()
@@ -501,6 +611,14 @@ int CameraDemo::getInterface() const
 int CameraDemo::getVideoSrc() const
 {
     return CAM->video_src;
+}
+bool CameraDemo::getIspAvailable() const
+{
+    return CAM->ispAvailable;
+}
+bool CameraDemo::getIsiAvailable() const
+{
+    return CAM->isiAvailable;
 }
 
 QString CameraDemo::getRecommendedOverlays() const
@@ -594,21 +712,24 @@ int CameraDemo::getExposure()
     {
         return 0;
     }
-    struct v4l2_control control;
-    std::memset(&control, 0, sizeof(control));
 
+    struct v4l2_control control;
+
+    // Get exposure
+    std::memset(&control, 0, sizeof(control));
     control.id = V4L2_CID_EXPOSURE;
     if (ioctl(CAM->device_fd, VIDIOC_G_CTRL, &control) == -1)
     {
         std::cerr << "ERROR: getting exposure" << std::endl;
     }
 
-    return control.value;
+    // std::cout << "Got exposure time: " << (int64_t)CAM->sensor->frame_width * (int64_t)control.value * 1000000 / CAM->pixel_rate << std::endl;
+    return (int64_t)CAM->sensor->frame_width * (int64_t)control.value * 1000000 / CAM->pixel_rate; // exposure time in microseconds
 }
 
-int CameraDemo::getHostHardware()
+Host_hardware CameraDemo::getHostHardware()
 {
-    return host_hardware;
+    return *host_hardware;
 }
 
 // ################# SLOTS (Called from UI) #################
@@ -621,8 +742,12 @@ void CameraDemo::setVideoSource(Video_srcs value)
     {
         CAM->video_src = ISP;
         cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
-        double fps = cap.get(cv::CAP_PROP_FPS);
-        tUpdate.start(1000 / fps);
+        if (CAM->status == ACTIVE)
+        {
+            double fps = cap.get(cv::CAP_PROP_FPS);
+            tUpdate.start(1000 / fps);
+        }
+        setAutoExposure(false); // use ISP auto exposure (disable sensor auto exposure)
     }
     else if (value == ISI)
     {
@@ -630,14 +755,19 @@ void CameraDemo::setVideoSource(Video_srcs value)
         CAM->setup_pipeline(); // setup pipeline every time ISP is switched to ISI
         // sleep(1);
         cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
-        double fps = cap.get(cv::CAP_PROP_FPS);
-        tUpdate.start(1000 / fps);
+        if (CAM->status == ACTIVE)
+        {
+            double fps = cap.get(cv::CAP_PROP_FPS);
+            tUpdate.start(1000 / fps);
+        }
     }
     emit videoSrcChanged();
 }
 
 void CameraDemo::setInterface(CSI_interface value)
 {
+    Camera_status previousCamStatus = CAM->status;
+
     if (CAM->status == ACTIVE)
     {
         tUpdate.stop();
@@ -670,19 +800,20 @@ void CameraDemo::setInterface(CSI_interface value)
     {
         cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
     }
-    double fps = cap.get(cv::CAP_PROP_FPS);
-    tUpdate.start(1000 / fps);
-    CAM->status = ACTIVE;
+    if (previousCamStatus == ACTIVE)
+    {
+        double fps = cap.get(cv::CAP_PROP_FPS);
+        tUpdate.start(1000 / fps);
+        CAM->status = ACTIVE;
+    }
 
-    emit framesizeChanged();
+    emit interfaceChanged();
     emit sensorChanged();
+    emit videoSrcChanged();
     emit autoExposureChanged();
-    emit hasAutoExposureChanged();
     emit flipVerticalChanged();
     emit flipHorizontalChanged();
     emit exposureChanged();
-    emit interfaceChanged();
-    emit videoSrcChanged();
 }
 
 void CameraDemo::setAutoExposure(bool value)
@@ -701,7 +832,7 @@ void CameraDemo::setAutoExposure(bool value)
     else
     {
         control.value = V4L2_EXPOSURE_MANUAL;
-        emit exposureChanged(); // if auto exposure is disabled, update the exposure slider
+        emit exposureChanged();
     }
 
     if (ioctl(CAM->device_fd, VIDIOC_S_CTRL, &control) == -1)
@@ -715,8 +846,9 @@ void CameraDemo::setExposure(int value)
 {
     struct v4l2_control control;
     control.id = V4L2_CID_EXPOSURE;
-    control.value = value;
+    control.value = value * CAM->pixel_rate / CAM->sensor->frame_width / 1000000; // calculate exposure time in lines
 
+    // Set exposure
     if (ioctl(CAM->device_fd, VIDIOC_S_CTRL, &control) == -1)
     {
         std::cerr << ("ERROR: Can't set exposure") << std::endl;

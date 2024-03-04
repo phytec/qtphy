@@ -15,6 +15,7 @@
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <linux/videodev2.h>
+#include <linux/v4l2-subdev.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,26 +31,45 @@
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
-
 #define V4L2_CID_VIV_EXTCTRL 0x98F901
 
 namespace EnumNamespace
 {
     Q_NAMESPACE
-    enum Video_srcs{ISP, ISI};
-    enum Camera_status{ACTIVE, READY, UNCONNECTED, ERROR};
-    enum Status{SINGLE_CAM, DUAL_CAM, NO_CAM, WRONG_OVERLAYS};
-    enum CSI_interface{CSI1, CSI2};
-    enum Phytec_board{IMX8MM_POLIS, IMX8MP_POLLUX};
+    enum Video_srcs
+    {
+        ISP,
+        ISI
+    };
+    enum Camera_status
+    {
+        ACTIVE,
+        READY,
+        UNCONNECTED,
+        ERROR
+    };
+    enum Status
+    {
+        OK,
+        NO_CAM,
+        WRONG_OVERLAYS,
+        ISP_UNAVAILABLE,
+        ISI_UNAVAILABLE,
+    };
+    enum CSI_interface
+    {
+        CSI1,
+        CSI2
+    };
     Q_ENUM_NS(Video_srcs);
     Q_ENUM_NS(Camera_status);
     Q_ENUM_NS(Status);
     Q_ENUM_NS(CSI_interface);
-    Q_ENUM_NS(Phytec_board);
 }
 using namespace EnumNamespace;
 
-struct Sensor {
+struct Sensor
+{
     std::string camera_name;
     std::string name;
     bool hasAutoExposure;
@@ -61,22 +81,43 @@ struct Sensor {
     int offset_y;
 };
 
+struct Host_hardware
+{
+    Q_GADGET
+public:
+    std::string hostname;
+    bool hasISP;
+    bool hasISI;
+    bool hasDualCam;
+    bool dualCamAvailable;
+    Q_PROPERTY(bool hasISP MEMBER hasISP)
+    Q_PROPERTY(bool hasISI MEMBER hasISI)
+    Q_PROPERTY(bool hasDualCam MEMBER hasDualCam)
+    Q_PROPERTY(bool dualCamAvailable MEMBER dualCamAvailable)
+};
 
 extern Sensor SENSORS[];
+extern Host_hardware HOST_HARDWARE[];
 
-class PhyCam {
+class PhyCam
+{
 public:
-    PhyCam(const int _interface, Phytec_board _host_hardware);
-    PhyCam() {};
+    PhyCam(const int _interface, Host_hardware *_host_hardware);
+    PhyCam(){};
     ~PhyCam();
 
     Camera_status status = UNCONNECTED;
+    bool isColor = 1;
+    int64_t pixel_rate = 1;
+    bool ispAvailable = false;
+    bool isiAvailable = false;
 
-    std::string device =  ""; // /dev/cam-csi1-port0   (CAM)
-    int device_fd = -1; // file descriptor of device (subdevFd)
+    std::string device = ""; // /dev/cam-csi1-port0   (CAM)
+    int device_fd = -1;      // file descriptor of device (subdevFd)
     int isp_fd = -1;
 
-    Phytec_board host_hardware = IMX8MM_POLIS;
+    Host_hardware *host_hardware;
+
     int csi_interface = -1;
     int port = -1;
 
@@ -113,27 +154,40 @@ class CameraDemo : public QObject
 {
     Q_OBJECT
 
+    // Camera Information
     Q_PROPERTY(QString cameraName // Camera Name
                    READ getCameraName
                        NOTIFY sensorChanged);
+    Q_PROPERTY(QString framesize // Framesize
+                   READ getFramesize
+                       NOTIFY sensorChanged);
+    Q_PROPERTY(bool hasAutoExposure // Auto Exposure availability on sensor
+                   READ getHasAutoExposure
+                       NOTIFY sensorChanged);
+
+    Q_PROPERTY(Host_hardware hostHardware // Host Hardware
+                   READ getHostHardware
+                       NOTIFY hostHardwareChanged);
+
     Q_PROPERTY(int interface // Interface
                    READ getInterface
                        NOTIFY interfaceChanged);
-    Q_PROPERTY(QString interfaceString // Interface
+    Q_PROPERTY(QString interfaceString // Interface string
                    READ getInterfaceString
                        NOTIFY interfaceChanged);
-    Q_PROPERTY(QString framesize // Framesize
-                   READ getFramesize
-                       NOTIFY framesizeChanged);
+    Q_PROPERTY(bool ispAvailable // ISP available on selected camera?
+                   READ getIspAvailable
+                       NOTIFY interfaceChanged);
+    Q_PROPERTY(bool isiAvailable // ISI available on selected camera?
+                   READ getIsiAvailable
+                       NOTIFY interfaceChanged);
     Q_PROPERTY(int videoSrc // Video Source (ISP or ISI)
                    READ getVideoSrc
                        NOTIFY videoSrcChanged);
+    // V4L2 Controls
     Q_PROPERTY(bool autoExposure // Auto Exposure
                    READ getAutoExposure
                        NOTIFY autoExposureChanged);
-    Q_PROPERTY(bool hasAutoExposure // Auto Exposure availability on sensor
-                   READ getHasAutoExposure
-                       NOTIFY hasAutoExposureChanged);
     Q_PROPERTY(bool flipVertical // Flip Vertical
                    READ getFlipVertical
                        NOTIFY flipVerticalChanged);
@@ -144,17 +198,14 @@ class CameraDemo : public QObject
                    READ getExposure
                        NOTIFY exposureChanged);
 
+    // Status and Errors
     Q_PROPERTY(QString recommendedOverlays // Recommended overlays
                    READ getRecommendedOverlays
                        NOTIFY recommendedOverlaysChanged);
 
-    Q_PROPERTY(Status status // No Camera Found
-                READ getStatus
-                    NOTIFY statusChanged);
-
-    Q_PROPERTY(int hostHardware // Host Board (polis-imx8mm / pollux-imx8mp)
-                READ getHostHardware
-                    NOTIFY hostHardwareChanged);
+    Q_PROPERTY(Status status
+                   READ getStatus
+                       NOTIFY statusChanged);
 
 public:
     CameraDemo(QObject *parent = nullptr);
@@ -167,23 +218,21 @@ private:
     cv::Mat frame;
     cv::VideoCapture cap;
 
-    Phytec_board host_hardware;
-    PhyCam* cam1 = nullptr;
-    PhyCam* cam2 = nullptr;
-    PhyCam* CAM = nullptr;
+    Host_hardware *host_hardware = &HOST_HARDWARE[0];
+    PhyCam *cam1 = nullptr;
+    PhyCam *cam2 = nullptr;
+    PhyCam *CAM = nullptr;
 
-    Status STATUS = SINGLE_CAM;
+    Status STATUS = OK;
     QString RECOMMENDED_OVERLAYS = "";
 
-    int isp_ioctl(const char *cmd, json& jsonRequest, json& jsonResponse);
+    int isp_ioctl(const char *cmd, json &jsonRequest, json &jsonResponse);
 
 signals:
     void newImage(QImage &);
 
-    void framesizeChanged();
     void sensorChanged();
     void autoExposureChanged();
-    void hasAutoExposureChanged();
     void flipVerticalChanged();
     void flipHorizontalChanged();
     void exposureChanged();
@@ -196,6 +245,8 @@ signals:
 
 public slots:
     void openCamera();
+    void detectCameras();
+
     QString getCameraName() const;
     QString getFramesize() const;
     QString getRecommendedOverlays() const;
@@ -203,6 +254,8 @@ public slots:
 
     int getInterface() const;
     int getVideoSrc() const;
+    bool getIspAvailable() const;
+    bool getIsiAvailable() const;
 
     bool getAutoExposure();
     bool getHasAutoExposure();
@@ -211,7 +264,7 @@ public slots:
 
     int getExposure();
     Status getStatus();
-    int getHostHardware();
+    Host_hardware getHostHardware();
 
     void setAutoExposure(bool value);
     void setFlipVertical(bool value);

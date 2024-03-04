@@ -56,7 +56,6 @@ Page {
                 buttons: MessageDialog.Ok | MessageDialog.Cancel
                 onAccepted: cameraDemo.reloadOverlays()
             }
-
             MessageDialog {
                 id: errorDialog2
                 visible: (cameraDemo.status == EnumNamespace.NO_CAM) ? true : false
@@ -64,6 +63,28 @@ Page {
                 text: "No Camera Found!"
                 informativeText: "No camera found on the CSI interfaces of the board!"
                 buttons: MessageDialog.Ok
+            }
+            MessageDialog {
+                id: errorDialog3
+                visible: (cameraDemo.status == EnumNamespace.ISP_UNAVAILABLE) ? true : false
+
+                text: "ISP overlay not loaded!"
+                informativeText: "Your hardware has an ISP but you did not load the ISP overlay for all connected cameras.\n" +
+                "The detectCamera script recommends the following devicetree overlays:\n\n" + cameraDemo.recommendedOverlays + "\n\n" +
+                "Do you want to load these overlays and reboot?"
+                buttons: MessageDialog.Ok | MessageDialog.Cancel
+                onAccepted: cameraDemo.reloadOverlays()
+            }
+            MessageDialog {
+                id: errorDialog4
+                visible: (cameraDemo.status == EnumNamespace.ISI_UNAVAILABLE) ? true : false
+
+                text: "ISI overlay not loaded!"
+                informativeText: "Your hardware has an ISI but you did not load the ISI overlay for all connected cameras.\n" +
+                "The detectCamera script recommends the following devicetree overlays:\n\n" + cameraDemo.recommendedOverlays + "\n\n" +
+                "Do you want to load these overlays and reboot?"
+                buttons: MessageDialog.Ok | MessageDialog.Cancel
+                onAccepted: cameraDemo.reloadOverlays()
             }
             Image {
                 id: streamImage
@@ -107,35 +128,41 @@ Page {
             }
             RowLayout {
                 Layout.fillHeight: true
-                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
 
                 Label {
+                    visible: (cameraDemo.hostHardware.hasISP && cameraDemo.hostHardware.hasISI)
+                    enabled: (cameraDemo.ispAvailable)
                     text: "ISP"
                     Layout.alignment: Qt.AlignVCenter
                 }
                 Switch {
                     id: videoSourceSwitch
+                    visible: (cameraDemo.hostHardware.hasISP && cameraDemo.hostHardware.hasISI)
+                    enabled:(cameraDemo.isiAvailable && cameraDemo.ispAvailable)
                     checked: cameraDemo.videoSrc
-
                     onCheckedChanged: {
                         cameraDemo.setVideoSource(checked)
                     }
                     Layout.alignment: Qt.AlignVCenter
                 }
                 Label {
+                    visible: (cameraDemo.hostHardware.hasISP && cameraDemo.hostHardware.hasISI)
+                    enabled: (cameraDemo.isiAvailable)
                     text: "ISI"
                     Layout.alignment: Qt.AlignVCenter
                     Layout.rightMargin: 10
                 }
 
                 Label {
+                    visible: (cameraDemo.hostHardware.hasDualCam)
                     text: "CSI1"
                     Layout.alignment: Qt.AlignVCenter
                 }
                 Switch {
                     id: interfaceSwitch
-                    checked: (cameraDemo.interface == 2) ? 1 : 0// TBD enum
-                    enabled: (cameraDemo.status == EnumNamespace.DUAL_CAM) ? 1 : 0 // TBD enum
+                    visible: (cameraDemo.hostHardware.hasDualCam)
+                    enabled: (cameraDemo.hostHardware.dualCamAvailable)
+                    checked: (cameraDemo.interface == 2) ? 1 : 0
 
                     onCheckedChanged: {
                         cameraDemo.setInterface(checked)
@@ -143,6 +170,7 @@ Page {
                     Layout.alignment: Qt.AlignVCenter
                 }
                 Label {
+                    visible: (cameraDemo.hostHardware.hasDualCam)
                     text: "CSI2"
                     Layout.alignment: Qt.AlignVCenter
                 }
@@ -216,7 +244,7 @@ Page {
                 Layout.fillHeight: true
                 text: "Auto Exposure"
                 enabled: (cameraDemo.videoSrc && cameraDemo.hasAutoExposure) // Enable only on ISI
-                checked: (cameraDemo.videoSrc && cameraDemo.hasAutoExposure && cameraDemo.autoExposure); // Can only be checked on ISI
+                checked: (cameraDemo.autoExposure);
                 onClicked: {
                     cameraDemo.setAutoExposure(autoExposureCheckbox.checked)
                 }
@@ -233,9 +261,7 @@ Page {
                 enabled: !(cameraDemo.autoExposure || aecCheckbox.checked) // TBD: .checked statement
                 from: 0
                 value: cameraDemo.exposure
-                to: 3000
-                // to: 65535 // TBD: this is the original maximum but it is way too high
-                // maybe orient on auto_exposure_max
+                to: 10000 // limit exposure time to 10ms
                 // step = 1
                 onMoved: {
                     cameraDemo.setExposure(exposureSlider.value)
@@ -243,7 +269,7 @@ Page {
             }
             // ISP Controls
             Label {
-                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
+                visible: cameraDemo.hostHardware.hasISP
                 Layout.topMargin: PhyTheme.marginSmall
                 Layout.fillHeight: true
                 text: "ISP Controls: "
@@ -251,10 +277,10 @@ Page {
             // Auto Exposure (ISP)
             CheckBox {
                 id: aecCheckbox
-                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
+                visible: cameraDemo.hostHardware.hasISP
+                enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
                 Layout.fillHeight: true
                 text: "ISP Auto Exposure"
-                enabled: !cameraDemo.videoSrc
                 checked: !cameraDemo.videoSrc
                 onClicked: {
                     cameraDemo.setAec(aecCheckbox.checked)
@@ -264,10 +290,10 @@ Page {
             // Auto White Balance
             CheckBox {
                 id: awbCheckbox
-                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
+                visible: cameraDemo.hostHardware.hasISP
+                enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
                 Layout.fillHeight: true
                 text: "Auto White Balance"
-                enabled: !cameraDemo.videoSrc
                 checked: !cameraDemo.videoSrc
                 onClicked: {
                     cameraDemo.setAwb(awbCheckbox.checked)
@@ -276,10 +302,10 @@ Page {
             // Lens Shading Correction
             CheckBox {
                 id: lscCheckbox
-                visible: (cameraDemo.hostHardware == EnumNamespace.IMX8MP_POLLUX) ? true : false
+                visible: cameraDemo.hostHardware.hasISP
+                enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
                 Layout.fillHeight: true
                 text: "Lens Shading Correction"
-                enabled: !cameraDemo.videoSrc
                 checked: !cameraDemo.videoSrc
                 onClicked: {
                     cameraDemo.setLsc(lscCheckbox.checked)
