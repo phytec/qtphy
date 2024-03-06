@@ -132,12 +132,12 @@ public:
     int setup_pipeline();
 };
 
-class OpencvImageProvider : public QQuickImageProvider
+class CameraImageProvider : public QQuickImageProvider
 {
     Q_OBJECT
 
 public:
-    OpencvImageProvider();
+    CameraImageProvider();
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override;
 
 public slots:

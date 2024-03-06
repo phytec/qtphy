@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
 
-    OpencvImageProvider* cameraFrameProvider = new OpencvImageProvider;
+    CameraImageProvider* cameraFrameProvider = new CameraImageProvider;
     engine.rootContext()->setContextProperty("cameraFrameProvider", cameraFrameProvider);
     engine.addImageProvider(QLatin1String("myCam"), cameraFrameProvider);
 

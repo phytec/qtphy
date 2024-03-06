@@ -615,15 +615,15 @@ void CameraDemo::reloadOverlays()
     system(command.c_str());
 }
 
-// ################# OpencvImageProvider #################
-OpencvImageProvider::OpencvImageProvider()
+// ################# CameraImageProvider #################
+CameraImageProvider::CameraImageProvider()
     : QQuickImageProvider(QQuickImageProvider::Image)
 {
     image = QImage(1280, 800, QImage::Format_RGB888);
     image.fill(QColor("blue"));
 }
 
-QImage OpencvImageProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
+QImage CameraImageProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
 {
     Q_UNUSED(id);
 
@@ -639,7 +639,7 @@ QImage OpencvImageProvider::requestImage(const QString &id, QSize *size, const Q
     return image;
 }
 
-void OpencvImageProvider::updateImage(const QImage image)
+void CameraImageProvider::updateImage(const QImage image)
 {
     this->image = image;
     emit imageChanged();
