@@ -3,19 +3,9 @@ TARGET = qtphy
 
 QT += qml quick dbus widgets multimedia
 
-
-QT_CONFIG -= no-pkg-config
-CONFIG += link_pkgconfig debug
-
-DEFINES += GST_USE_UNSTABLE_API
-
-INCLUDEPATH += ./lib
-INCLUDEPATH += ./usr/lib
-
-LIBS += $(shell pkg-config opencv --libs)
-LIBS += -L/usr/lib -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_shape -lopencv_videoio -lopencv_imgproc
-
-LD_LIBRARY_PATH = /usr/bin
+INCLUDEPATH += /home/hahn/imx8/imx8mp_PD23.1.0_1/build/tmp/work/cortexa53-crypto-phytec-linux/qtphy/git-r0/recipe-sysroot/usr/include/gstreamer-1.0
+INCLUDEPATH += /home/hahn/imx8/imx8mp_PD23.1.0_1/build/tmp/work/cortexa53-crypto-phytec-linux/qtphy/git-r0/recipe-sysroot/usr/include/glib-2.0
+INCLUDEPATH += /home/hahn/imx8/imx8mp_PD23.1.0_1/build/tmp/work/cortexa53-crypto-phytec-linux/qtphy/git-r0/recipe-sysroot/usr/lib/glib-2.0/include
 
 SOURCES += \
     src/main.cpp \

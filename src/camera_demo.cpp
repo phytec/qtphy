@@ -10,7 +10,8 @@
 #include <QPainter>
 #include <QDebug>
 
-#include <opencv2/opencv.hpp>
+#include <gst/gst.h>
+#include <gst/app/gstappsink.h>
 
 #include <iostream>
 #include <string>
@@ -147,9 +148,11 @@ PhyCam::PhyCam(int _interface, Host_hardware *_host_hardware) : csi_interface(_i
     // Construct gstreamer pipelines:
     std::string framesize = "width=" + std::to_string(sensor->frame_width) + ", height=" + std::to_string(sensor->frame_height);
     std::string isiFormat;
+    std::string isiConversion;
     if (isColor)
     {
-        isiFormat = "video/x-bayer,format=grbg, ";
+        isiFormat = "video/x-bayer,format=grbg, ";;
+        isiConversion = " ! bayer2rgbneon";
     }
     else
     {
@@ -157,12 +160,12 @@ PhyCam::PhyCam(int _interface, Host_hardware *_host_hardware) : csi_interface(_i
     }
     if (host_hardware->hasDualCam)
     {
-        isp_pipeline = "v4l2src device=/dev/video-isp-csi" + std::to_string(csi_interface) + " ! video/x-raw,format=YUY2, " + framesize + " ! appsink";
-        isi_pipeline = "v4l2src device=/dev/video-isi-csi" + std::to_string(csi_interface) + " ! " + isiFormat + framesize + " ! appsink";
+        isp_pipeline = "v4l2src device=/dev/video-isp-csi" + std::to_string(csi_interface) + " ! video/x-raw,format=YUY2, " + framesize + " ! videoconvert ! video/x-raw,format=RGB ! appsink name=mysink";
+        isi_pipeline = "v4l2src device=/dev/video-isi-csi" + std::to_string(csi_interface) + " ! " + isiFormat + framesize + isiConversion + " ! videoconvert ! video/x-raw,format=RGB ! appsink name=mysink";
     }
     else
     {
-        isi_pipeline = "v4l2src device=/dev/video-csi" + std::to_string(csi_interface) + " ! " + isiFormat + framesize + " ! appsink";
+        isi_pipeline = "v4l2src device=/dev/video-csi" + std::to_string(csi_interface) + " ! " + isiFormat + framesize + isiConversion + " ! videoconvert ! video/x-raw,format=RGB ! appsink name=mysink";
         isp_pipeline = "";
     }
     status = READY;
@@ -265,9 +268,79 @@ int PhyCam::getSensor()
     }
 }
 
+// Define a static callback function to forward the signal to the member function
+static GstFlowReturn on_new_sample_callback(GstAppSink *sink, gpointer user_data) {
+    // Cast the user data to the CameraDemo instance
+    CameraDemo *cameraDemo = static_cast<CameraDemo *>(user_data);
+    // Call the non-static member function using the instance
+    return cameraDemo->on_new_sample(sink);
+}
+
+// Function to handle new Images
+GstFlowReturn CameraDemo::on_new_sample(GstAppSink *sink)
+{
+    GstSample *sample = gst_app_sink_pull_sample(sink);
+    GstBuffer *buffer = gst_sample_get_buffer(sample);
+    GstMapInfo map;
+    gst_buffer_map(buffer, &map, GST_MAP_READ);
+
+    int width = CAM->sensor->frame_width;
+    int height = CAM->sensor->frame_height;
+
+    QImage image =  QImage(map.data, width, height, QImage::Format_RGB888);
+    emit newImage(image);
+
+    gst_buffer_unmap(buffer, &map);
+    gst_sample_unref(sample);
+
+    return GST_FLOW_OK;
+}
+
+void CameraDemo::startStream(std::string pipeline_string)
+{
+    stopStream();
+
+    pipeline = gst_parse_launch(pipeline_string.c_str(), NULL);
+    if (!pipeline)
+    {
+        std::cerr << "Failed to create pipeline" << std::endl;
+    }
+
+    appsink = gst_bin_get_by_name(GST_BIN(pipeline), "mysink");
+    if (!appsink)
+    {
+        std::cerr << "Failed to get appsink element" << std::endl;
+        gst_object_unref(pipeline);
+    }
+
+    g_object_set(appsink, "emit-signals", TRUE, NULL);
+    g_object_set(appsink, "caps", gst_caps_from_string("video/x-raw, format=RGB"), NULL); // set appsink to accept only RGB format
+    g_signal_connect(appsink, "new-sample", G_CALLBACK(on_new_sample_callback), this);
+
+    bus = gst_element_get_bus(pipeline);
+    gst_bus_add_signal_watch(bus);
+
+    int ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    if (ret == GST_STATE_CHANGE_FAILURE)
+    {
+        std::cerr << "Failed to set pipeline to playing state" << std::endl;
+        gst_object_unref(pipeline);
+        return;
+    }
+}
+void CameraDemo::stopStream()
+{
+    if (pipeline)
+    {
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+    }
+}
+
+
 CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
 {
-    connect(&tUpdate, &QTimer::timeout, this, &CameraDemo::updateFrame);
+    gst_init(NULL, NULL);
+
     char hostname[256];
     if (gethostname(hostname, sizeof(hostname)) == 0)
     {
@@ -356,20 +429,20 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
     if (CAM->ispAvailable)
     {
         CAM->video_src = ISP;
-        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER); // TODO: this takes long and delays loading of the UI
     }
     else
     {
         CAM->video_src = ISI;
-        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER); // TODO: this takes long and delays loading of the UI
     }
-    emit videoSrcChanged(); // OK // TODO: this takes long and delays loading of the UI
+    emit videoSrcChanged();
 }
 
 CameraDemo::~CameraDemo()
 {
-    tUpdate.stop();
-    cap.release();
+    stopStream();
+    gst_object_unref(bus);
+    gst_object_unref(pipeline);
+    gst_object_unref(appsink);
     if (cam2 == cam1)
     {
         delete cam1;
@@ -387,7 +460,7 @@ void CameraDemo::detectCameras()
     QProcess process;
     QStringList arguments;
     arguments << "detectCamera"
-                << "-m";
+              << "-m";
     process.start("/bin/sh", arguments);
     process.waitForFinished(-1);
     QString output = process.readAllStandardOutput();
@@ -524,28 +597,16 @@ void CameraDemo::openCamera()
     }
 
     // Start capturing video
-    double fps = cap.get(cv::CAP_PROP_FPS);
-    tUpdate.start(1000 / fps);
-    CAM->status = ACTIVE;
-}
-
-void CameraDemo::updateFrame()
-{
-    cv::Mat rawFrame;
-    cap >> rawFrame;
-
     if (CAM->video_src == ISP)
     {
-        cv::cvtColor(rawFrame, frame, cv::COLOR_YUV2RGB_YUY2);
-        QImage image = QImage(frame.data, frame.cols, frame.rows, QImage::Format_RGB888);
-        emit newImage(image);
+        startStream(CAM->isp_pipeline);
     }
     else
     {
-        cv::cvtColor(rawFrame, frame, cv::COLOR_BayerGB2RGB);
-        QImage image = QImage(frame.data, frame.cols, frame.rows, QImage::Format_RGB888);
-        emit newImage(image);
+        startStream(CAM->isi_pipeline);
     }
+
+    CAM->status = ACTIVE;
 }
 
 void CameraDemo::reloadOverlays()
@@ -578,7 +639,7 @@ QImage OpencvImageProvider::requestImage(const QString &id, QSize *size, const Q
     return image;
 }
 
-void OpencvImageProvider::updateImage(const QImage &image)
+void OpencvImageProvider::updateImage(const QImage image)
 {
     this->image = image;
     emit imageChanged();
@@ -735,17 +796,13 @@ Host_hardware CameraDemo::getHostHardware()
 // ################# SLOTS (Called from UI) #################
 void CameraDemo::setVideoSource(Video_srcs value)
 {
-    tUpdate.stop();
-    cap.release();
-
+    stopStream();
     if (value == ISP)
     {
         CAM->video_src = ISP;
-        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
         if (CAM->status == ACTIVE)
         {
-            double fps = cap.get(cv::CAP_PROP_FPS);
-            tUpdate.start(1000 / fps);
+            startStream(CAM->isp_pipeline);
         }
         setAutoExposure(false); // use ISP auto exposure (disable sensor auto exposure)
     }
@@ -753,12 +810,9 @@ void CameraDemo::setVideoSource(Video_srcs value)
     {
         CAM->video_src = ISI;
         CAM->setup_pipeline(); // setup pipeline every time ISP is switched to ISI
-        // sleep(1);
-        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
         if (CAM->status == ACTIVE)
         {
-            double fps = cap.get(cv::CAP_PROP_FPS);
-            tUpdate.start(1000 / fps);
+            startStream(CAM->isi_pipeline);
         }
     }
     emit videoSrcChanged();
@@ -770,8 +824,7 @@ void CameraDemo::setInterface(CSI_interface value)
 
     if (CAM->status == ACTIVE)
     {
-        tUpdate.stop();
-        cap.release();
+        stopStream();
         CAM->status = READY;
     }
 
@@ -792,21 +845,18 @@ void CameraDemo::setInterface(CSI_interface value)
     CAM->setup_pipeline();
     // sleep(1);
 
-    if (CAM->video_src == ISP)
-    {
-        cap = cv::VideoCapture(CAM->isp_pipeline, cv::CAP_GSTREAMER);
-    }
-    else
-    {
-        cap = cv::VideoCapture(CAM->isi_pipeline, cv::CAP_GSTREAMER);
-    }
     if (previousCamStatus == ACTIVE)
     {
-        double fps = cap.get(cv::CAP_PROP_FPS);
-        tUpdate.start(1000 / fps);
+        if (CAM->video_src == ISP)
+        {
+            startStream(CAM->isp_pipeline);
+        }
+        else
+        {
+            startStream(CAM->isi_pipeline);
+        }
         CAM->status = ACTIVE;
     }
-
     emit interfaceChanged();
     emit sensorChanged();
     emit videoSrcChanged();

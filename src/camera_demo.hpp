@@ -26,7 +26,8 @@
 
 #include <json.hpp>
 
-#include <opencv2/opencv.hpp>
+#include <gst/gst.h>
+#include <gst/app/gstappsink.h>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -123,7 +124,6 @@ public:
 
     Sensor *sensor = &SENSORS[0];
     Video_srcs video_src = ISP;
-    cv::VideoCapture cap;
     std::string setup_pipeline_command = "";
     std::string isp_pipeline = "";
     std::string isi_pipeline = "";
@@ -141,7 +141,7 @@ public:
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override;
 
 public slots:
-    void updateImage(const QImage &image);
+    void updateImage(const QImage image);
 
 signals:
     void imageChanged();
@@ -149,6 +149,8 @@ signals:
 private:
     QImage image;
 };
+
+static GstFlowReturn on_new_sample_callback(GstAppSink *sink, gpointer user_data);
 
 class CameraDemo : public QObject
 {
@@ -212,11 +214,17 @@ public:
     ~CameraDemo();
     void updateFrame();
     Q_INVOKABLE void reloadOverlays();
+    GstFlowReturn on_new_sample(GstAppSink *sink);
 
 private:
     QTimer tUpdate;
-    cv::Mat frame;
-    cv::VideoCapture cap;
+    void startStream(std::string pipeline_string);
+    void stopStream();
+
+    GstElement *pipeline = nullptr;
+    GstElement *appsink = nullptr;
+    GstBus *bus = nullptr;
+
 
     Host_hardware *host_hardware = &HOST_HARDWARE[0];
     PhyCam *cam1 = nullptr;
@@ -229,7 +237,7 @@ private:
     int isp_ioctl(const char *cmd, json &jsonRequest, json &jsonResponse);
 
 signals:
-    void newImage(QImage &);
+    void newImage(QImage image);
 
     void sensorChanged();
     void autoExposureChanged();
