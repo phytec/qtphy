@@ -94,7 +94,8 @@ PhyCam::PhyCam(int _interface, Host_hardware *_host_hardware) : csi_interface(_i
     // Check if ISI is available
     if (host_hardware->hasISI)
     {
-        if ((access(("/dev/video-isi-csi" + std::to_string(csi_interface)).c_str(), F_OK) == 0))
+        if ((access(("/dev/video-isi-csi" + std::to_string(csi_interface)).c_str(), F_OK) == 0) ||
+             (access(("/dev/video-csi" + std::to_string(csi_interface)).c_str(), F_OK) == 0))
         {
             isiAvailable = true;
         }
@@ -165,8 +166,9 @@ PhyCam::PhyCam(int _interface, Host_hardware *_host_hardware) : csi_interface(_i
     }
     else
     {
-        isi_pipeline = "v4l2src device=/dev/video-csi" + std::to_string(csi_interface) + " ! " + isiFormat + framesize + isiConversion + " ! videoconvert ! video/x-raw,format=RGB ! appsink name=mysink";
+        // TODO this might be a problem with single cam boards that have a isp (currently non existant but might in the future)
         isp_pipeline = "";
+        isi_pipeline = "v4l2src device=/dev/video-csi" + std::to_string(csi_interface) + " ! " + isiFormat + framesize + isiConversion + " ! videoconvert ! video/x-raw,format=RGB ! appsink name=mysink";
     }
     status = READY;
 }
@@ -385,11 +387,13 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
     // Check available cameras
     if (cam1->status == READY && cam2->status == READY)
     {
+        // dual camera
         CAM = cam1;
         host_hardware->dualCamAvailable = true;
     }
     else
     {
+        // single camera
         host_hardware->dualCamAvailable = false;
         if (cam1->status == READY)
         {
@@ -468,7 +472,15 @@ void CameraDemo::detectCameras()
     RECOMMENDED_OVERLAYS = output;
     emit recommendedOverlaysChanged();
 
-    if (returnCode == 0)
+    if (returnCode == 127)
+    {
+        // detectCamera script not found
+        STATUS = NO_CAM;
+        std::cerr << "ERROR: The detectCamera script was not found. Could not detect cameras." << std::endl;
+        emit statusChanged();
+        return;
+    }
+    else if (returnCode == 0)
     {
         // Additional cameras found (reload overlays to use them)
         STATUS = WRONG_OVERLAYS;
@@ -611,7 +623,7 @@ void CameraDemo::openCamera()
 
 void CameraDemo::reloadOverlays()
 {
-    std::string command = "/root/detectCamera.sh -s \"" + RECOMMENDED_OVERLAYS.toStdString() + "\"";
+    std::string command = "detectCamera -s \"" + RECOMMENDED_OVERLAYS.toStdString() + "\"";
     system(command.c_str());
 }
 
