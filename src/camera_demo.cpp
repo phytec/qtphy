@@ -37,10 +37,10 @@ using json = nlohmann::json;
 
 Sensor SENSORS[] = {
     {"", "", false, 0, 0, 0, 0, 0, 0},                          // default
-    {"VM016", "ar0144", true, 1280, 800, 1280, 800, 0, 0},      // vm016
-    {"VM017", "ar0521", false, 2560, 1440, 1280, 720, 16, 252}, // vm017
-    {"VM020", "ar0234", true, 2560, 1440, 1280, 720, 16, 252},  // vm020
-    {"---", "---", false, 0, 0, 0, 0, 0, 0}                     // Sentinel value to indicate the end
+    {"VM016", "ar0144", true, true, 1280, 800, 1280, 800, 0, 4},      // vm016
+    {"VM017", "ar0521", false, false, 2560, 1440, 1280, 720, 4, 4}, // vm017 // TODO  siehe notebook erst bildausschnitt wählen mit offset und dann entspreched kleineres format auswählen -> treiber skippt automatisch
+    {"VM020", "ar0234", true, false, 1920, 1200, 960, 600, 8, 8},  // vm020 // TODO
+    {"---", "---", false, false, 0, 0, 0, 0, 0, 0}                     // Sentinel value to indicate the end
 
 };
 
@@ -75,20 +75,15 @@ PhyCam::PhyCam(int _interface, Host_hardware *_host_hardware) : csi_interface(_i
     }
 
     // Check if ISP is available
-    if (host_hardware->hasISP)
+    if (host_hardware->hasISP && (access(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), F_OK) == 0))
     {
-        if ((access(("/dev/video-isp-csi" + std::to_string(csi_interface)).c_str(), F_OK) == 0))
-        {
-            ispAvailable = true;
-        }
-        else
-        {
-            ispAvailable = false;
-        }
+        ispAvailable = true;
+        video_src = ISP;
     }
     else
     {
         ispAvailable = false;
+        video_src = ISI;
     }
 
     // Check if ISI is available
@@ -372,16 +367,14 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
             if (HOST_HARDWARE[i].hostname == "---")
             {
                 std::cerr << "ERROR: Unknown hostname, your hardware is not supported by the qtphy demo" << std::endl;
-                // exit(-1);
-                // TBD: return to start page
+                exit(1);
             }
         }
     }
     else
     {
         std::cerr << "ERROR: Unable to get hostname" << std::endl;
-        // exit(-1);
-        // TBD: return to start page
+        exit(1);
     }
 
     // Check available cameras
@@ -407,8 +400,13 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
     }
     emit interfaceChanged();
 
-    // Warn user when ISP or ISI is misconfigured (overlas not loaded)
-    if (host_hardware->hasISP && ((cam1->status == READY && cam1->ispAvailable == false) ||
+    // Warn user when ISP or ISI is misconfigured or unsupported
+    if (host_hardware->hasISP && (access("/opt/imx8-isp/bin/isp_media_server", F_OK) != 0))
+    {
+        STATUS = ISP_UNSUPPORTED;
+        emit statusChanged();
+    }
+    else if (host_hardware->hasISP && ((cam1->status == READY && cam1->ispAvailable == false) ||
                                   (cam2->status == READY && cam2->ispAvailable == false)))
     {
         if (RECOMMENDED_OVERLAYS.isEmpty())
@@ -429,16 +427,8 @@ CameraDemo::CameraDemo(QObject *parent) : QObject(parent)
         emit statusChanged();
     }
 
-    // select video source
-    if (CAM->ispAvailable)
-    {
-        CAM->video_src = ISP;
-    }
-    else
-    {
-        CAM->video_src = ISI;
-    }
-    emit videoSrcChanged();
+    emit videoSrcChanged(); // might have been changed in PhyCam constructor
+    // openCamera();
 }
 
 CameraDemo::~CameraDemo()
@@ -472,27 +462,34 @@ void CameraDemo::detectCameras()
     RECOMMENDED_OVERLAYS = output;
     emit recommendedOverlaysChanged();
 
-    if (returnCode == 127)
+    std::cout << "DETECT CAMERA RETURN CODE: " << returnCode << std::endl;
+
+    if (returnCode == 127) // detectCamera script not found
     {
-        // detectCamera script not found
         STATUS = NO_CAM;
         std::cerr << "ERROR: The detectCamera script was not found. Could not detect cameras." << std::endl;
-        emit statusChanged();
-        return;
     }
-    else if (returnCode == 0)
+    else if (returnCode == 0) // Additional cameras found (reload overlays to use them)
     {
-        // Additional cameras found (reload overlays to use them)
         STATUS = WRONG_OVERLAYS;
-        emit statusChanged();
-        return;
     }
-    // else if (returnCode == 1) // no additional camera found
-    else if (returnCode == 2)
+    else if (returnCode == 2) // No camera connected
     {
-        // No camera connected
         STATUS = NO_CAM;
     }
+    else if (returnCode == 1) // No additional camera found
+    {
+        if (cam1->status == UNCONNECTED && cam2->status == UNCONNECTED)
+        {
+            STATUS = NO_CAM;
+        }
+        else {
+            STATUS = OK;
+        }
+    }
+ 
+    emit statusChanged();
+
 }
 
 int CameraDemo::isp_ioctl(const char *cmd, json &jsonRequest, json &jsonResponse)
@@ -548,15 +545,7 @@ int CameraDemo::isp_ioctl(const char *cmd, json &jsonRequest, json &jsonResponse
         return 0;
     }
 }
-
-void CameraDemo::setDwe(bool value)
-{
-    json jRequest, jResponse;
-    jRequest["bypass"] = !value;
-    isp_ioctl("dwe.s.bypass", jRequest, jResponse);
-    return;
-}
-
+// automatically set to default (1) when stream i started
 void CameraDemo::setAwb(bool value)
 {
     // Enable AWB
@@ -565,7 +554,7 @@ void CameraDemo::setAwb(bool value)
     isp_ioctl("awb.s.en", jRequest, jResponse);
 
     // Configure AWB parameters
-    json request = json::parse(R"(
+    jRequest = json::parse(R"(
         {
         "matrix": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
         "offset": {
@@ -582,27 +571,32 @@ void CameraDemo::setAwb(bool value)
         }
     )");
     isp_ioctl("wb.s.cfg", jRequest, jResponse);
-    return;
 }
 
+// automatically set to default (1) when stream i started
 void CameraDemo::setLsc(bool value)
 {
     json jRequest, jResponse;
     jRequest["enable"] = value;
     isp_ioctl("lsc.s.en", jRequest, jResponse);
-    return;
 }
 
+// automatically set to default (1) when stream i started
 void CameraDemo::setAec(bool value)
 {
     json jRequest, jResponse;
     jRequest["enable"] = value;
     isp_ioctl("ae.s.en", jRequest, jResponse);
-    return;
+    // emit aecChanged();
 }
 
 void CameraDemo::openCamera()
 {
+    if (STATUS == NO_CAM)
+    {
+        emit statusChanged();
+        return;
+    }
     if (cam1->status == ACTIVE || cam2->status == ACTIVE)
     {
         return;
@@ -743,6 +737,12 @@ bool CameraDemo::getHasAutoExposure()
     return CAM->sensor->hasAutoExposure;
 }
 
+
+bool CameraDemo::getFlipSupported()
+{
+    return CAM->sensor ? CAM->sensor->flip_supported : false;
+}
+
 bool CameraDemo::getFlipHorizontal()
 {
     if (CAM->device_fd < 0)
@@ -798,6 +798,25 @@ int CameraDemo::getExposure()
 
     // std::cout << "Got exposure time: " << (int64_t)CAM->sensor->frame_width * (int64_t)control.value * 1000000 / CAM->pixel_rate << std::endl;
     return (int64_t)CAM->sensor->frame_width * (int64_t)control.value * 1000000 / CAM->pixel_rate; // exposure time in microseconds
+}
+
+int CameraDemo::getGain()
+{
+    if (CAM->device_fd < 0)
+    {
+        return 0;
+    }
+
+    struct v4l2_control control;
+
+    // Get exposure
+    std::memset(&control, 0, sizeof(control));
+    control.id = V4L2_CID_ANALOGUE_GAIN;
+    if (ioctl(CAM->device_fd, VIDIOC_G_CTRL, &control) == -1)
+    {
+        std::cerr << "ERROR: getting gain" << std::endl;
+    }
+    return control.value;
 }
 
 Host_hardware CameraDemo::getHostHardware()
@@ -882,7 +901,6 @@ void CameraDemo::setAutoExposure(bool value)
 {
     if (!CAM->sensor->hasAutoExposure)
     {
-        std::cerr << "ERROR: This camera has no auto exposure" << std::endl;
         return;
     }
     struct v4l2_control control;
@@ -904,16 +922,55 @@ void CameraDemo::setAutoExposure(bool value)
     emit autoExposureChanged();
 }
 
-void CameraDemo::setExposure(int value)
+void CameraDemo::setExposure(int exposure, int gain)
 {
-    struct v4l2_control control;
-    control.id = V4L2_CID_EXPOSURE;
-    control.value = value * CAM->pixel_rate / CAM->sensor->frame_width / 1000000; // calculate exposure time in lines
-
-    // Set exposure
-    if (ioctl(CAM->device_fd, VIDIOC_S_CTRL, &control) == -1)
+    if (CAM->video_src == ISP)
     {
-        std::cerr << ("ERROR: Can't set exposure") << std::endl;
+        float exposure_seconds = exposure / 1000000.0; // convert exposure time from microseconds to seconds
+        json jRequest, jResponse;
+        jRequest["time"] = exposure_seconds;
+        // map range 1000-14000 to isp gain range (1-110)
+        float ispGain = (gain - 1000) * (110 - 1) / (14000 - 1000) + 1;
+        jRequest["gain"] = ispGain;
+        isp_ioctl("ec.s.cfg", jRequest, jResponse);
+    }
+    else
+    {
+        struct v4l2_control control;
+        control.id = V4L2_CID_EXPOSURE;
+        control.value = exposure * CAM->pixel_rate / CAM->sensor->frame_width / 1000000; // calculate exposure time in lines
+
+        // Set exposure
+        if (ioctl(CAM->device_fd, VIDIOC_S_CTRL, &control) == -1)
+        {
+            std::cerr << ("ERROR: Can't set exposure") << std::endl;
+        }
+    }
+}
+
+void CameraDemo::setGain(int exposure, int gain)
+{
+    if (CAM->video_src == ISP)
+    {
+        float exposure_seconds = exposure / 1000000.0; // convert exposure time from microseconds to seconds
+        json jRequest, jResponse;
+        jRequest["time"] = exposure_seconds;
+        // map range 1000-14000 to isp gain range (1-110)
+        float ispGain = (gain - 1000) * (110 - 1) / (14000 - 1000) + 1;
+        jRequest["gain"] = ispGain;
+        isp_ioctl("ec.s.cfg", jRequest, jResponse);
+    }
+    else
+    {
+        struct v4l2_control control;
+        control.id = V4L2_CID_ANALOGUE_GAIN;
+        control.value = gain;
+
+        // Set exposure
+        if (ioctl(CAM->device_fd, VIDIOC_S_CTRL, &control) == -1)
+        {
+            std::cerr << ("ERROR: Can't set gain") << std::endl;
+        }
     }
 }
 

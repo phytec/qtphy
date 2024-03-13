@@ -3,7 +3,7 @@
         <file>main.qml</file>
         <file>qtquickcontrols2.conf</file>
         <file>PhyStyle/Button.qml</file>
-        <file>PhyStyle/Label.qml</file>
+        <file>PhyStyle/demo/Label.qml</file>
         <file>PhyStyle/ToolBar.qml</file>
         <file>PhyStyle/ToolButton.qml</file>
         <file>controls/PhyFileDialog.qml</file>

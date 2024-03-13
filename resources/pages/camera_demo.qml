@@ -11,6 +11,7 @@ import Phytec.CameraDemo 1.0
 import PhyTheme 1.0
 import QtMultimedia
 import "../controls"
+import "../PhyStyle/demo"
 import Phytec.CameraDemo.Enums 1.0
 
 Page {
@@ -77,6 +78,15 @@ Page {
             }
             MessageDialog {
                 id: errorDialog4
+                visible: (cameraDemo.status == EnumNamespace.ISP_UNSUPPORTED) ? true : false
+
+                text: "ISP is not supported by your image!"
+                informativeText: "Your hardware has an ISP but the image you are using does not support it. \n" +
+                "Make sure you are using the phytec-vison-image to use ISP features."
+                buttons: MessageDialog.Ok
+            }
+            MessageDialog {
+                id: errorDialog5
                 visible: (cameraDemo.status == EnumNamespace.ISI_UNAVAILABLE) ? true : false
 
                 text: "ISI overlay not loaded!"
@@ -121,6 +131,7 @@ Page {
                 id: startButton
                 Layout.fillHeight: true
                 text: "Open Camera"
+                font.pointSize: 14
                 onClicked: {
                     cameraDemo.openCamera()
                 }
@@ -219,10 +230,11 @@ Page {
             }
             // Horizontal Flip
             CheckBox {
-                Layout.fillHeight: true
-
                 id: flipHorizontalCheckbox
+                Layout.fillHeight: true
+                font.pointSize: 14
                 text: "Flip Horizontal"
+                enabled: cameraDemo.flipSupported
                 checked: cameraDemo.flipHorizontal
                 onClicked: {
                     cameraDemo.setFlipHorizontal(flipHorizontalCheckbox.checked)
@@ -232,7 +244,9 @@ Page {
             CheckBox {
                 id: flipVerticalCheckbox
                 Layout.fillHeight: true
+                font.pointSize: 14
                 text: "Flip Vertical"
+                enabled: cameraDemo.flipSupported
                 checked: cameraDemo.flipVertical
                 onClicked: {
                     cameraDemo.setFlipVertical(flipVerticalCheckbox.checked)
@@ -242,6 +256,7 @@ Page {
             CheckBox {
                 id: autoExposureCheckbox
                 Layout.fillHeight: true
+                font.pointSize: 14
                 text: "Auto Exposure"
                 enabled: (cameraDemo.videoSrc && cameraDemo.hasAutoExposure) // Enable only on ISI
                 checked: (cameraDemo.autoExposure);
@@ -258,13 +273,29 @@ Page {
                 id: exposureSlider
                 Layout.fillHeight: true
                 // disable when isp or sensor Auto Exposure is enabled
-                enabled: !(cameraDemo.autoExposure || aecCheckbox.checked) // TBD: .checked statement
+                enabled: !(cameraDemo.autoExposure || aecCheckbox.checked)
                 from: 0
                 value: cameraDemo.exposure
-                to: 10000 // limit exposure time to 10ms
-                // step = 1
+                to: 30000 // limit exposure time to 10ms
                 onMoved: {
-                    cameraDemo.setExposure(exposureSlider.value)
+                    cameraDemo.setExposure(exposureSlider.value, gainSlider.value)
+                }
+            }
+            // Gain Slider
+            Label {
+                Layout.fillHeight: true
+                text: "Gain"
+            }
+            Slider {
+                id: gainSlider
+                Layout.fillHeight: true
+                // disable when isp or sensor Auto Exposure is enabled
+                enabled: !(cameraDemo.autoExposure || aecCheckbox.checked)
+                from: 1000
+                value: cameraDemo.gain
+                to: 14000
+                onMoved: {
+                    cameraDemo.setGain(exposureSlider.value, gainSlider.value)
                 }
             }
             // ISP Controls
@@ -274,12 +305,14 @@ Page {
                 Layout.fillHeight: true
                 text: "ISP Controls: "
             }
+
             // Auto Exposure (ISP)
             CheckBox {
                 id: aecCheckbox
                 visible: cameraDemo.hostHardware.hasISP
                 enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
                 Layout.fillHeight: true
+                font.pointSize: 14
                 text: "ISP Auto Exposure"
                 checked: !cameraDemo.videoSrc
                 onClicked: {
@@ -293,6 +326,7 @@ Page {
                 visible: cameraDemo.hostHardware.hasISP
                 enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
                 Layout.fillHeight: true
+                font.pointSize: 14
                 text: "Auto White Balance"
                 checked: !cameraDemo.videoSrc
                 onClicked: {
@@ -305,6 +339,7 @@ Page {
                 visible: cameraDemo.hostHardware.hasISP
                 enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
                 Layout.fillHeight: true
+                font.pointSize: 14
                 text: "Lens Shading Correction"
                 checked: !cameraDemo.videoSrc
                 onClicked: {

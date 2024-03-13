@@ -74,6 +74,7 @@ struct Sensor
     std::string camera_name;
     std::string name;
     bool hasAutoExposure;
+    bool flip_supported;
     int sensor_width;
     int sensor_height;
     int frame_width;
@@ -190,6 +191,9 @@ class CameraDemo : public QObject
     Q_PROPERTY(bool autoExposure // Auto Exposure
                    READ getAutoExposure
                        NOTIFY autoExposureChanged);
+    Q_PROPERTY(bool flipSupported // Flip Supported
+                   READ getFlipSupported
+                       NOTIFY interfaceChanged);
     Q_PROPERTY(bool flipVertical // Flip Vertical
                    READ getFlipVertical
                        NOTIFY flipVerticalChanged);
@@ -199,12 +203,13 @@ class CameraDemo : public QObject
     Q_PROPERTY(int exposure // Exposure
                    READ getExposure
                        NOTIFY exposureChanged);
-
+    Q_PROPERTY(int gain // Digital Gain
+                   READ getGain
+                       NOTIFY gainChanged);
     // Status and Errors
     Q_PROPERTY(QString recommendedOverlays // Recommended overlays
                    READ getRecommendedOverlays
                        NOTIFY recommendedOverlaysChanged);
-
     Q_PROPERTY(Status status
                    READ getStatus
                        NOTIFY statusChanged);
@@ -225,7 +230,6 @@ private:
     GstElement *appsink = nullptr;
     GstBus *bus = nullptr;
 
-
     Host_hardware *host_hardware = &HOST_HARDWARE[0];
     PhyCam *cam1 = nullptr;
     PhyCam *cam2 = nullptr;
@@ -244,6 +248,7 @@ signals:
     void flipVerticalChanged();
     void flipHorizontalChanged();
     void exposureChanged();
+    void gainChanged();
     void videoSrcChanged();
     void interfaceChanged();
     void recommendedOverlaysChanged();
@@ -267,10 +272,12 @@ public slots:
 
     bool getAutoExposure();
     bool getHasAutoExposure();
+    bool getFlipSupported();
     bool getFlipHorizontal();
     bool getFlipVertical();
 
     int getExposure();
+    int getGain();
     Status getStatus();
     Host_hardware getHostHardware();
 
@@ -278,14 +285,14 @@ public slots:
     void setFlipVertical(bool value);
     void setFlipHorizontal(bool value);
     void setExposure(int value);
+    void setGain(int value);
 
     void setVideoSource(Video_srcs value);
     void setInterface(CSI_interface value);
 
-    void setDwe(bool value);
+    void setAec(bool value);
     void setAwb(bool value);
     void setLsc(bool value);
-    void setAec(bool value);
 };
 
 #endif /* CAMERA_DEMO_HPP */
