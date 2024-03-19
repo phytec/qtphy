@@ -56,6 +56,7 @@ namespace EnumNamespace
         WRONG_OVERLAYS,
         ISP_UNAVAILABLE,
         ISI_UNAVAILABLE,
+        ISP_UNSUPPORTED,
     };
     enum CSI_interface
     {
@@ -100,6 +101,7 @@ public:
 
 extern Sensor SENSORS[];
 extern Host_hardware HOST_HARDWARE[];
+float mapToRange(float value, float inMin, float inMax, float outMin, float outMax);
 
 class PhyCam
 {
@@ -107,6 +109,8 @@ public:
     PhyCam(const int _interface, Host_hardware *_host_hardware);
     PhyCam(){};
     ~PhyCam();
+
+    int checkISPAvailable();
 
     Camera_status status = UNCONNECTED;
     bool isColor = 1;
@@ -203,9 +207,18 @@ class CameraDemo : public QObject
     Q_PROPERTY(int exposure // Exposure
                    READ getExposure
                        NOTIFY exposureChanged);
-    Q_PROPERTY(int gain // Digital Gain
-                   READ getGain
-                       NOTIFY gainChanged);
+    Q_PROPERTY(int analogGain // Analog Gain
+                   READ getAnalogGain
+                       NOTIFY analogGainChanged);
+    Q_PROPERTY(int digitalGain // Digital Gain
+                   READ getDigitalGain
+                       NOTIFY digitalGainChanged);
+    Q_PROPERTY(int ispExposure // ISP Exposure
+                   READ getIspExposure
+                       NOTIFY exposureChanged);
+    Q_PROPERTY(int ispGain // ISP Gain
+                   READ getIspGain
+                       NOTIFY ispGainChanged);
     // Status and Errors
     Q_PROPERTY(QString recommendedOverlays // Recommended overlays
                    READ getRecommendedOverlays
@@ -222,9 +235,15 @@ public:
     GstFlowReturn on_new_sample(GstAppSink *sink);
 
 private:
-    QTimer tUpdate;
+    QTimer sliderUpdateTimer;
     void startStream(std::string pipeline_string);
     void stopStream();
+    void updateSliders();
+
+    // ISP will not be available directly after boot -> check periodically until available (max 30 times)
+    QTimer checkIspTimer;
+    void delayedStatusUpdate();
+
 
     GstElement *pipeline = nullptr;
     GstElement *appsink = nullptr;
@@ -248,7 +267,9 @@ signals:
     void flipVerticalChanged();
     void flipHorizontalChanged();
     void exposureChanged();
-    void gainChanged();
+    void analogGainChanged();
+    void digitalGainChanged();
+    void ispGainChanged();
     void videoSrcChanged();
     void interfaceChanged();
     void recommendedOverlaysChanged();
@@ -277,7 +298,10 @@ public slots:
     bool getFlipVertical();
 
     int getExposure();
-    int getGain();
+    int getAnalogGain();
+    int getDigitalGain();
+    int getIspGain();
+    int getIspExposure();
     Status getStatus();
     Host_hardware getHostHardware();
 
@@ -285,7 +309,10 @@ public slots:
     void setFlipVertical(bool value);
     void setFlipHorizontal(bool value);
     void setExposure(int value);
-    void setGain(int value);
+    void setDigitalGain(int value);
+    void setAnalogGain(int value);
+    void setISPGain(int gain);
+    void setISPExposure(int exposure);
 
     void setVideoSource(Video_srcs value);
     void setInterface(CSI_interface value);

@@ -6,7 +6,7 @@
 import QtQuick 2.0
 import QtQuick.Dialogs
 import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.0
+import QtQuick.Layouts
 import Phytec.CameraDemo 1.0
 import PhyTheme 1.0
 import QtMultimedia
@@ -222,130 +222,275 @@ Page {
                     text: cameraDemo.framesize
                 }
             }
-            // Sensor Controls
-            Label {
-                Layout.topMargin: PhyTheme.marginSmall
-                Layout.fillHeight: true
-                text: "Sensor Controls: "
-            }
-            // Horizontal Flip
-            CheckBox {
-                id: flipHorizontalCheckbox
-                Layout.fillHeight: true
-                font.pointSize: 14
-                text: "Flip Horizontal"
-                enabled: cameraDemo.flipSupported
-                checked: cameraDemo.flipHorizontal
-                onClicked: {
-                    cameraDemo.setFlipHorizontal(flipHorizontalCheckbox.checked)
-                }
-            }
-            // Vertical Flip
-            CheckBox {
-                id: flipVerticalCheckbox
-                Layout.fillHeight: true
-                font.pointSize: 14
-                text: "Flip Vertical"
-                enabled: cameraDemo.flipSupported
-                checked: cameraDemo.flipVertical
-                onClicked: {
-                    cameraDemo.setFlipVertical(flipVerticalCheckbox.checked)
-                }
-            }
-            // Auto Exposure
-            CheckBox {
-                id: autoExposureCheckbox
-                Layout.fillHeight: true
-                font.pointSize: 14
-                text: "Auto Exposure"
-                enabled: (cameraDemo.videoSrc && cameraDemo.hasAutoExposure) // Enable only on ISI
-                checked: (cameraDemo.autoExposure);
-                onClicked: {
-                    cameraDemo.setAutoExposure(autoExposureCheckbox.checked)
-                }
-            }
-            // Exposure Slider
-            Label {
-                Layout.fillHeight: true
-                text: "Exposure"
-            }
-            Slider {
-                id: exposureSlider
-                Layout.fillHeight: true
-                // disable when isp or sensor Auto Exposure is enabled
-                enabled: !(cameraDemo.autoExposure || aecCheckbox.checked)
-                from: 0
-                value: cameraDemo.exposure
-                to: 30000 // limit exposure time to 10ms
-                onMoved: {
-                    cameraDemo.setExposure(exposureSlider.value, gainSlider.value)
-                }
-            }
-            // Gain Slider
-            Label {
-                Layout.fillHeight: true
-                text: "Gain"
-            }
-            Slider {
-                id: gainSlider
-                Layout.fillHeight: true
-                // disable when isp or sensor Auto Exposure is enabled
-                enabled: !(cameraDemo.autoExposure || aecCheckbox.checked)
-                from: 1000
-                value: cameraDemo.gain
-                to: 14000
-                onMoved: {
-                    cameraDemo.setGain(exposureSlider.value, gainSlider.value)
-                }
-            }
-            // ISP Controls
-            Label {
-                visible: cameraDemo.hostHardware.hasISP
-                Layout.topMargin: PhyTheme.marginSmall
-                Layout.fillHeight: true
-                text: "ISP Controls: "
-            }
 
-            // Auto Exposure (ISP)
-            CheckBox {
-                id: aecCheckbox
-                visible: cameraDemo.hostHardware.hasISP
-                enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
-                Layout.fillHeight: true
-                font.pointSize: 14
-                text: "ISP Auto Exposure"
-                checked: !cameraDemo.videoSrc
-                onClicked: {
-                    cameraDemo.setAec(aecCheckbox.checked)
+            TabBar {
+                id: tabBar
+                Layout.fillWidth: true
+                currentIndex: !cameraDemo.videoSrc
+                TabButton {
+                    Layout.fillWidth: true
+                    id: sensorControlsTabButton
+                    font.pointSize: 14
+                    background: Rectangle {
+                        color: "transparent"
+                        implicitWidth: 100
+                        implicitHeight: 50
+                        opacity: enabled ? 1 : 0.3
+                        Rectangle {
+                            width: parent.width
+                            height: 2 // Height of the bottom margin
+                            color: tabBar.currentIndex === 0 ? "#2196F3" : "transparent" // Color of the bottom margin
+                            anchors.bottom: parent.bottom // Align at the bottom of the TabButton
+                        }
+                    }
+                    contentItem: Text {
+                        text: "Sensor controls"
+                        font: sensorControlsTabButton.font
+                        opacity: enabled ? 1.0 : 0.3
+                        color: tabBar.currentIndex == 0 ? "#2196F3" : PhyTheme.gray4
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+                TabButton {
+                    Layout.fillWidth: true
+                    id: ispControlsTabButton
+                    visible: cameraDemo.hostHardware.hasISP
+                    font.pointSize: 14
+                    background: Rectangle {
+                        color: "transparent"
+                        implicitWidth: 100
+                        implicitHeight: 50
+                        opacity: enabled ? 1 : 0.3
+                        Rectangle {
+                            width: parent.width
+                            height: 2 // Height of the bottom margin
+                            color: tabBar.currentIndex === 1 ? "#2196F3" : "transparent" // Color of the bottom margin
+                            anchors.bottom: parent.bottom // Align at the bottom of the TabButton
+                        }
+                    }
+                    contentItem: Text {
+                        text: "ISP controls"
+                        font: ispControlsTabButton.font
+                        opacity: enabled ? 1.0 : 0.3
+                        color: tabBar.currentIndex == 1 ? "#2196F3" : PhyTheme.gray4
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
                 }
             }
 
-            // Auto White Balance
-            CheckBox {
-                id: awbCheckbox
-                visible: cameraDemo.hostHardware.hasISP
-                enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
+
+            StackLayout {
+                // width: parent.width
+                currentIndex: tabBar.currentIndex
                 Layout.fillHeight: true
-                font.pointSize: 14
-                text: "Auto White Balance"
-                checked: !cameraDemo.videoSrc
-                onClicked: {
-                    cameraDemo.setAwb(awbCheckbox.checked)
+
+                // Sensor Controls
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    id: isiTab
+                    // Horizontal Flip
+                    CheckBox {
+                        id: flipHorizontalCheckbox
+                        Layout.fillHeight: true
+                        font.pointSize: 14
+                        text: "Flip Horizontal"
+                        enabled: cameraDemo.flipSupported
+                        checked: cameraDemo.flipHorizontal
+                        onClicked: {
+                            cameraDemo.setFlipHorizontal(flipHorizontalCheckbox.checked)
+                        }
+                    }
+                    // Vertical Flip
+                    CheckBox {
+                        id: flipVerticalCheckbox
+                        Layout.fillHeight: true
+                        font.pointSize: 14
+                        text: "Flip Vertical"
+                        enabled: cameraDemo.flipSupported
+                        checked: cameraDemo.flipVertical
+                        onClicked: {
+                            cameraDemo.setFlipVertical(flipVerticalCheckbox.checked)
+                        }
+                    }
+                    // Auto Exposure
+                    CheckBox {
+                        id: autoExposureCheckbox
+                        Layout.fillHeight: true
+                        font.pointSize: 14
+                        text: "Auto Exposure & Gain"
+                        enabled: (cameraDemo.videoSrc && cameraDemo.hasAutoExposure) // Enable only on ISI
+                        checked: (cameraDemo.videoSrc && cameraDemo.autoExposure);
+                        onClicked: {
+                            cameraDemo.setAutoExposure(autoExposureCheckbox.checked)
+                        }
+                    }
+                    // Exposure Slider
+                    Label {
+                        Layout.fillHeight: true
+                        text: "Exposure"
+                        opacity: exposureSlider.enabled ? 1 : 0.3
+                    }
+                    Slider {
+                        id: exposureSlider
+                        Layout.fillHeight: true
+                        // disable only on ISI and whe no Auto Exposure is enabled
+                        enabled: !cameraDemo.autoExposure && cameraDemo.videoSrc
+                        from: 0
+                        value: cameraDemo.autoExposure ? 0 : cameraDemo.exposure
+                        to: 30000 // limit exposure time to 30ms
+                        onMoved: {
+                            cameraDemo.setExposure(exposureSlider.value)
+                        }
+                    }
+                    // Analog Gain Slider
+                    Label {
+                        Layout.fillHeight: true
+                        text: "Analog Gain"
+                        opacity: analogGainSlider.enabled ? 1 : 0.3
+                    }
+                    Slider {
+                        id: analogGainSlider
+                        Layout.fillHeight: true
+                        // disable when isp or sensor Auto Exposure is enabled
+                        enabled: !cameraDemo.autoExposure && cameraDemo.videoSrc
+                        from: 1000
+                        value: cameraDemo.autoExposure ? 0 : cameraDemo.analogGain
+                        to: 14000
+                        onMoved: {
+                            cameraDemo.setAnalogGain(analogGainSlider.value)
+                        }
+                    }
+                    // Analog Gain Slider
+                    Label {
+                        Layout.fillHeight: true
+                        text: "Digital Gain"
+                        opacity: digitalGainSlider.enabled ? 1 : 0.3
+                    }
+                    Slider {
+                        id: digitalGainSlider
+                        Layout.fillHeight: true
+                        // disable when isp or sensor Auto Exposure is enabled
+                        enabled: !cameraDemo.autoExposure && cameraDemo.videoSrc
+                        from: 1000
+                        value:  cameraDemo.autoExposure ? 0 : cameraDemo.digitalGain
+                        to: 14000
+                        onMoved: {
+                            cameraDemo.setDigitalGain(digitalGainSlider.value)
+                        }
+                    }
+                }
+
+                // ISP Controls
+                ColumnLayout {
+                    id: ispTab
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    Text {
+                        text: "! ISP overlay not loaded !"
+                        visible: !cameraDemo.ispAvailable
+                        Layout.alignment: Qt.AlignHCenter
+                        font.pointSize: 14
+                        color: "red"
+                    }
+                    Text {
+                        text: "! This board has no ISP !"
+                        Layout.alignment: Qt.AlignHCenter
+                        visible: !cameraDemo.hostHardware.hasISP
+                        font.pointSize: 14
+                        color: "red"
+                    }
+                    Text {
+                        text: "! Your Image has no ISP support !"
+                        Layout.alignment: Qt.AlignHCenter
+                        visible: (cameraDemo.status == EnumNamespace.ISP_UNSUPPORTED) ? true : false
+                        font.pointSize: 14
+                        color: "red"
+                    }
+
+                    // Auto Exposure (ISP)
+                    CheckBox {
+                        id: aecCheckbox
+                        // visible: cameraDemo.hostHardware.hasISP
+                        enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
+                        Layout.fillHeight: true
+                        font.pointSize: 14
+                        text: "Auto Exposure & Gain"
+                        checked: !cameraDemo.videoSrc
+                        onClicked: {
+                            cameraDemo.setAec(aecCheckbox.checked)
+                        }
+                    }
+
+                    // Auto White Balance
+                    CheckBox {
+                        id: awbCheckbox
+                        // visible: cameraDemo.hostHardware.hasISP
+                        enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
+                        Layout.fillHeight: true
+                        font.pointSize: 14
+                        text: "Auto White Balance"
+                        checked: !cameraDemo.videoSrc
+                        onClicked: {
+                            cameraDemo.setAwb(awbCheckbox.checked)
+                        }
+                    }
+                    // Lens Shading Correction
+                    CheckBox {
+                        id: lscCheckbox
+                        // visible: cameraDemo.hostHardware.hasISP
+                        enabled: !cameraDemo.videoSrc && cameraDemo.ispAvailable
+                        Layout.fillHeight: true
+                        font.pointSize: 14
+                        text: "Lens Shading Correction"
+                        checked: !cameraDemo.videoSrc
+                        onClicked: {
+                            cameraDemo.setLsc(lscCheckbox.checked)
+                        }
+                    }
+                    // Exposure Slider
+                    Label {
+                        Layout.fillHeight: true
+                        text: "Exposure"
+                        opacity: ispExposureSlider.enabled ? 1 : 0.3
+                    }
+                    Slider {
+                        id: ispExposureSlider
+                        Layout.fillHeight: true
+                        // disable when isp or sensor Auto Exposure is enabled
+                        enabled: !cameraDemo.videoSrc && !aecCheckbox.checked
+                        from: 0
+                        value: cameraDemo.ispExposure
+                        // cameraDemo.autoExposure ? 0 : cameraDemo.exposure
+                        to: 100 // limit exposure time to 30ms
+                        onMoved: {
+                            cameraDemo.setISPExposure(ispExposureSlider.value)
+                        }
+                    }
+                    // Gain Slider
+                    Label {
+                        Layout.fillHeight: true
+                        text: "Gain"
+                        opacity: ispGainSlider.enabled ? 1 : 0.3
+                    }
+                    Slider {
+                        id: ispGainSlider
+                        Layout.fillHeight: true
+                        // disable when isp or sensor Auto Exposure is enabled
+                        enabled: !cameraDemo.videoSrc && !aecCheckbox.checked
+                        from: 1
+                        value: cameraDemo.ispGain
+                        to: 100
+                        onMoved: {
+                            cameraDemo.setISPGain(ispGainSlider.value)
+                        }
+                    }
                 }
             }
-            // Lens Shading Correction
-            CheckBox {
-                id: lscCheckbox
-                visible: cameraDemo.hostHardware.hasISP
-                enabled: (!cameraDemo.videoSrc && cameraDemo.ispAvailable)
-                Layout.fillHeight: true
-                font.pointSize: 14
-                text: "Lens Shading Correction"
-                checked: !cameraDemo.videoSrc
-                onClicked: {
-                    cameraDemo.setLsc(lscCheckbox.checked)
-                }
-            }
+
             Item {
                 Layout.fillHeight: true
             }
