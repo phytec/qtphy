@@ -686,6 +686,11 @@ void CameraDemo::openCamera()
         emit statusChanged();
         return;
     }
+    if (STATUS == WRONG_OVERLAYS && cam1->status == UNCONNECTED && cam2->status == UNCONNECTED)
+    {
+        emit statusChanged();
+        return;
+    }
     if (cam1->status == ACTIVE || cam2->status == ACTIVE)
     {
         return;
