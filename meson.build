@@ -7,6 +7,7 @@ project(
 
 qt6 = import('qt6')
 qt6_dep = dependency('qt6', modules : ['Core', 'Qml', 'Quick', 'Gui', 'DBus', 'Multimedia'])
+gstreamer_dep = dependency('gstreamer-1.0')
 
 headers = [
   'src/device_info.hpp',
@@ -38,7 +39,7 @@ executable(
   qt_preprocessed,
   sources : [src, res, moc],
   include_directories : [inc, configinc],
-  dependencies : [qt6_dep]
+  dependencies : [qt6_dep, gstreamer_dep]
   c_args : gst_plugins_good_args,
   install : true
 )
