@@ -32,18 +32,25 @@ Page {
 
         RowLayout {
             Layout.fillWidth: true
+            Layout.margins: PhyTheme.marginRegular
 
-            Label {
-                Layout.fillWidth: true
-                text: "<h1>" + rauc.targetName + "</h1>"
+            ColumnLayout {
+                Label {
+                    text: "Target Name"
+                    color: PhyTheme.gray3
+                    Layout.fillWidth: true
+                }
+                Label {
+                    text: "<h1>" + rauc.targetName + "</h1>"
+                    Layout.fillWidth: true
+                }
             }
             RowLayout {
-                Layout.fillWidth: true
                 ButtonGroup {
                     id: activeGroup
                 }
                 Rectangle {
-                    width: font.pointSize * 8
+                    width: font.pointSize * 12
                     height: width
                     color: rauc.isBootedSlot("A") ? PhyTheme.teal2 : PhyTheme.gray3
                     RadioButton {
@@ -57,6 +64,7 @@ Page {
                     Label {
                         anchors.centerIn: parent
                         text: "<h1>A</h1>system0"
+                        color: PhyTheme.white
                         horizontalAlignment: Text.AlignHCenter
                     }
                     ProgressBar {
@@ -67,7 +75,7 @@ Page {
                     }
                 }
                 Rectangle {
-                    width: font.pointSize * 8
+                    width: font.pointSize * 12
                     height: width
                     color: rauc.isBootedSlot("B") ? PhyTheme.teal2 : PhyTheme.gray3
                     RadioButton {
@@ -81,6 +89,7 @@ Page {
                     Label {
                         anchors.centerIn: parent
                         text: "<h1>B</h1>system1"
+                        color: PhyTheme.white
                         horizontalAlignment: Text.AlignHCenter
                     }
                     ProgressBar {
