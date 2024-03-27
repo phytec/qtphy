@@ -50,7 +50,7 @@ Page {
                     id: activeGroup
                 }
                 Rectangle {
-                    width: font.pointSize * 8
+                    width: font.pointSize * 12
                     height: width
                     color: rauc.isBootedSlot("A") ? PhyTheme.teal2 : PhyTheme.gray3
                     RadioButton {
@@ -74,7 +74,7 @@ Page {
                     }
                 }
                 Rectangle {
-                    width: font.pointSize * 8
+                    width: font.pointSize * 12
                     height: width
                     color: rauc.isBootedSlot("B") ? PhyTheme.teal2 : PhyTheme.gray3
                     RadioButton {
