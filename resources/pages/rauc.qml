@@ -32,13 +32,20 @@ Page {
 
         RowLayout {
             Layout.fillWidth: true
+            Layout.margins: PhyTheme.marginRegular
 
-            Label {
-                Layout.fillWidth: true
-                text: "<h1>" + rauc.targetName + "</h1>"
+            ColumnLayout {
+                Label {
+                    text: "Target Name"
+                    color: PhyTheme.gray3
+                    Layout.fillWidth: true
+                }
+                Label {
+                    text: "<h1>" + rauc.targetName + "</h1>"
+                    Layout.fillWidth: true
+                }
             }
             RowLayout {
-                Layout.fillWidth: true
                 ButtonGroup {
                     id: activeGroup
                 }
