@@ -64,6 +64,7 @@ Page {
                     Label {
                         anchors.centerIn: parent
                         text: "<h1>A</h1>system0"
+                        color: PhyTheme.white
                         horizontalAlignment: Text.AlignHCenter
                     }
                     ProgressBar {
@@ -88,6 +89,7 @@ Page {
                     Label {
                         anchors.centerIn: parent
                         text: "<h1>B</h1>system1"
+                        color: PhyTheme.white
                         horizontalAlignment: Text.AlignHCenter
                     }
                     ProgressBar {
