@@ -1,6 +1,6 @@
 project(
   'qtphy', 'cpp',
-  version : '0.3.0',
+  version : '0.3.1',
   license : 'MIT',
   meson_version : '>=0.63.0'
 )
