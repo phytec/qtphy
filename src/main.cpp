@@ -7,10 +7,12 @@
 #include <QQmlApplicationEngine>
 #include <QCommandLineParser>
 #include <QQmlContext>
+#include <QQuickWindow>
 #include <QSettings>
 #include <QFile>
 #include "device_info.hpp"
 #include "rauc.hpp"
+#include "multimedia_qmlsink.hpp"
 
 void writeDefaultSettings()
 {
@@ -69,13 +71,16 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<DeviceInfo>("Phytec.DeviceInfo", 1, 0, "DeviceInfo",
                                          DeviceInfo::singletontypeProvider);
     qmlRegisterType<Rauc>("Phytec.Rauc", 1, 0, "Rauc");
+    MultimediaGST *multimediaGST = new MultimediaGST(&app, argc, argv);
 
     QQmlApplicationEngine engine;
     engine.addImportPath("qrc:///themes");
     engine.rootContext()->setContextProperty("raucHawkbitConfigPath",
                                              parser.value("rauc-hawkbit-config"));
     engine.rootContext()->setContextProperty("enabledPages", enabledPages);
+    engine.rootContext()->setContextProperty("multimediaGST", multimediaGST);
     engine.load(QUrl(QStringLiteral("qrc:///main.qml")));
+    multimediaGST->setRootObject(static_cast<QQuickWindow *> (engine.rootObjects().first()));
 
     return app.exec();
 }

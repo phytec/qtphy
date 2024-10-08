@@ -38,6 +38,12 @@ ApplicationWindow {
             page: "qrc:///pages/multimedia.qml"
         }
         ListElement {
+            icon: "\ue8da"
+            name: "Multimedia GST"
+            description: "Play movies with hardware acceleration"
+            page: "qrc:///pages/multimedia_qmlsink.qml"
+        }
+        ListElement {
             icon: "\ue8d7"
             name: "RAUC – Update Client"
             description: "View the RAUC status and update your device with new software"
