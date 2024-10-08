@@ -20,5 +20,6 @@
         <file>pages/widget_factory.qml</file>
         <file>themes/PhyTheme/PhyTheme.qml</file>
         <file>themes/PhyTheme/qmldir</file>
+        <file>pages/multimedia_qmlsink.qml</file>
     </qresource>
 </RCC>
