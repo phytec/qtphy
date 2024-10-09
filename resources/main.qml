@@ -38,12 +38,6 @@ ApplicationWindow {
             page: "qrc:///pages/multimedia.qml"
         }
         ListElement {
-            icon: "\ue8da"
-            name: "Multimedia GST"
-            description: "Play movies with hardware acceleration"
-            page: "qrc:///pages/multimedia_qmlsink.qml"
-        }
-        ListElement {
             icon: "\ue8d7"
             name: "RAUC – Update Client"
             description: "View the RAUC status and update your device with new software"
@@ -184,6 +178,10 @@ ApplicationWindow {
                 for (var i = 0; i < pageModel.count; i++) {
                     var entry = pageModel.get(i);
                     if (enabledPages.indexOf(entry.name) >= 0) {
+                        // Workaround as we can not use variables for ListElement property values.
+                        if(entry.name === "Multimedia") {
+                            entry.page = "qrc:///pages/" + multimediaPage
+                        }
                         items.insert(entry, "configured");
                     }
                 }
