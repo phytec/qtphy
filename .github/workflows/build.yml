@@ -15,11 +15,15 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install meson ninja-build qt6-base-dev qt6-declarative-dev qt6-multimedia-dev
+          sudo apt-get install meson cmake ninja-build qt6-base-dev qt6-declarative-dev qt6-multimedia-dev
       - name: Build application using Meson Build System
         run: |
           meson setup build-meson --buildtype=release
           meson compile -C build-meson
+      - name: Build application using CMake
+        run: |
+          cmake -S . -B build-cmake
+          cmake --build build-cmake
       - name: Build application using qmake
         run: |
           mkdir build-qmake
