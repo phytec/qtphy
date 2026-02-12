@@ -13,23 +13,28 @@ ToolBar {
     property string subTitle: ""
     property alias buttonBack: buttonBack
     property alias buttonMenu: buttonMenu
+    property alias infoMenu: infoMenu
 
     RowLayout {
         anchors.fill: parent
 
-        ToolButton {
-            id: buttonBack
-            text: PhyTheme.iconFont.arrowLeft
-            font.family: icons.font.family
-            flat: true
-            leftPadding: PhyTheme.marginBig
-            rightPadding: PhyTheme.marginBig
-            topPadding: PhyTheme.marginRegular
-            bottomPadding: PhyTheme.marginRegular
+        RowLayout {
+            id: toolBarLeft
+            Layout.fillWidth: false
+            Layout.minimumWidth: toolBarRight.width
+            ToolButton {
+                id: buttonBack
+                text: PhyTheme.iconFont.arrowLeft
+                font.family: icons.font.family
+                flat: true
+                leftPadding: PhyTheme.marginBig
+                rightPadding: PhyTheme.marginBig
+                topPadding: PhyTheme.marginRegular
+                bottomPadding: PhyTheme.marginRegular
+            }
         }
         ColumnLayout {
-            Layout.alignment: Qt.AlignVCenter
-
+            Layout.alignment: Qt.AlignCenter
             Label {
                 text: "<b>" + title + "</b>"
                 elide: Text.ElideRight
@@ -41,21 +46,38 @@ ToolBar {
                 visible: text !== ""
                 elide: Text.ElideLeft
                 scale: 0.8
+                horizontalAlignment: Text.AlignHCenter
                 Layout.fillWidth: true
-                Layout.alignment: Qt.AlignHCenter
             }
         }
-        ToolButton {
-            id: buttonMenu
+        RowLayout {
+            id: toolBarRight
             Layout.fillWidth: false
-            text: PhyTheme.iconFont.list
-            font.family: icons.font.family
-            flat: true
-            visible: false
-            leftPadding: PhyTheme.marginBig
-            rightPadding: PhyTheme.marginBig
-            topPadding: PhyTheme.marginRegular
-            bottomPadding: PhyTheme.marginRegular
+            Layout.minimumWidth: toolBarLeft.width
+            ToolButton {
+                id: infoMenu
+                Layout.fillWidth: false
+                text: PhyTheme.iconFont.info
+                font.family: icons.font.family
+                flat: true
+                visible: false
+                leftPadding: PhyTheme.marginBig
+                rightPadding: PhyTheme.marginBig
+                topPadding: PhyTheme.marginRegular
+                bottomPadding: PhyTheme.marginRegular
+            }
+            ToolButton {
+                id: buttonMenu
+                Layout.fillWidth: false
+                text: PhyTheme.iconFont.list
+                font.family: icons.font.family
+                flat: true
+                visible: false
+                leftPadding: PhyTheme.marginBig
+                rightPadding: PhyTheme.marginBig
+                topPadding: PhyTheme.marginRegular
+                bottomPadding: PhyTheme.marginRegular
+            }
         }
     }
 }

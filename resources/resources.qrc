@@ -6,6 +6,7 @@
         <file>PhyStyle/Label.qml</file>
         <file>PhyStyle/ToolBar.qml</file>
         <file>PhyStyle/ToolButton.qml</file>
+        <file>controls/PhyConvertDialog.qml</file>
         <file>controls/PhyFileDialog.qml</file>
         <file>controls/PhyToolBar.qml</file>
         <file>fonts/MaterialIcons-Regular.ttf</file>
@@ -21,5 +22,6 @@
         <file>themes/PhyTheme/PhyTheme.qml</file>
         <file>themes/PhyTheme/qmldir</file>
         <file>pages/multimedia_qmlsink.qml</file>
+        <file>pages/MultimediaInfo.qml</file>
     </qresource>
 </RCC>

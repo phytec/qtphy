@@ -30,8 +30,23 @@ Rectangle {
         id: fileDelegate
 
         Item {
+            id: fileItem
+            property int discoverResult
             width: listView.width
             height: labelFileName.implicitHeight
+
+            Component.onCompleted: {
+                if (folderListModel.isFolder(index) || !fileUrl) {
+                    discoverResult = 0
+                } else {
+                    discoverResult = multimediaFormats.getFileDiscoverResult(fileUrl)
+                    if (typeof multimediaGST !== "undefined" && discoverResult === 0) {
+                        if (!multimediaFormats.getFileVideoCodec(fileUrl).length || !multimediaFormats.getFileAudioCodec(fileUrl).length)
+                            discoverResult = 5
+                    }
+                }
+                enabled = discoverResult === 0
+            }
 
             RowLayout {
                 anchors.fill: parent
@@ -49,8 +64,27 @@ Rectangle {
                     Layout.fillWidth: true
                 }
                 Label {
+                    Component.onCompleted: {
+                        if (folderListModel.isFolder(index) || !fileUrl)
+                            return
+                        if (fileItem.discoverResult === 0)
+                            text = multimediaFormats.formatList(multimediaFormats.getFileVideoCodec(fileUrl)).join(", ")
+                        else if (fileItem.discoverResult === 2)
+                            text = "unknown"
+                        else if (fileItem.discoverResult === 5)
+                            text = "unsupported"
+                        else
+                            text = "failed"
+                    }
+                    Layout.rightMargin: PhyTheme.marginSmall
+                }
+                Label {
                     text: fileSize + " B"
                     Layout.rightMargin: PhyTheme.marginSmall
+                    leftPadding: labelHeaderSize.leftPadding - contentWidth + labelHeaderSize.contentWidth
+                    onContentWidthChanged: () => {
+                        labelHeaderSize.leftPadding = Math.max(labelHeaderSize.leftPadding, contentWidth - labelHeaderSize.contentWidth)
+                    }
                 }
             }
 
@@ -85,6 +119,7 @@ Rectangle {
     }
 
     ColumnLayout {
+        visible: !convertDialogLoader.active
         anchors.fill: dialog
         spacing: 0
 
@@ -106,9 +141,20 @@ Rectangle {
                 Layout.rightMargin: PhyTheme.marginRegular
             }
             Button {
+                text: "Convert"
+                flat: true
+                onClicked: {
+                    if (listView.currentIndex === -1)
+                        return
+                    convertDialogLoader.active = true
+                }
+            }
+            Button {
                 text: "Open"
                 flat: true
                 onClicked: {
+                    if (listView.currentIndex === -1)
+                        return
                     dialog.selectedFile = dialog.currentFile
                     dialog.visible = false
                 }
@@ -130,6 +176,11 @@ Rectangle {
                     Layout.leftMargin: PhyTheme.marginSmall
                 }
                 Label {
+                    text: "Video Codec"
+                    Layout.rightMargin: PhyTheme.marginSmall
+                }
+                Label {
+                    id: labelHeaderSize
                     text: "Size"
                     Layout.rightMargin: PhyTheme.marginSmall
                 }
@@ -141,6 +192,7 @@ Rectangle {
             Layout.fillHeight: true
             Layout.fillWidth: true
             clip: true
+            currentIndex: -1
             boundsBehavior: Flickable.StopAtBounds
             model: folderListModel
             delegate: fileDelegate
@@ -148,5 +200,13 @@ Rectangle {
                 color: PhyTheme.gray1
             }
         }
+    }
+
+    Loader {
+        id: convertDialogLoader
+        active: false
+        source: "PhyConvertDialog.qml"
+        anchors.fill: parent
+        onLoaded: item.file = dialog.currentFile
     }
 }

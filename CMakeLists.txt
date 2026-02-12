@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Qml Quick Gui DBus Multimedia)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(gstreamer REQUIRED IMPORTED_TARGET gstreamer-1.0 gstreamer-pbutils-1.0)
 
 list(APPEND qtphy_sources
     resources/resources.qrc
@@ -17,6 +19,8 @@ list(APPEND qtphy_sources
     src/device_info.cpp
     src/rauc.hpp
     src/rauc.cpp
+    src/multimedia_formats.hpp
+    src/multimedia_formats.cpp
 )
 
 list(APPEND qtphy_libraries
@@ -26,17 +30,13 @@ list(APPEND qtphy_libraries
     Qt6::Gui
     Qt6::DBus
     Qt6::Multimedia
+    PkgConfig::gstreamer
 )
 
 if(QML_SINK)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(gstreamer REQUIRED IMPORTED_TARGET gstreamer-1.0)
     list(APPEND qtphy_sources
         src/multimedia_qmlsink.hpp
         src/multimedia_qmlsink.cpp
-    )
-    list(APPEND qtphy_libraries
-        PkgConfig::gstreamer
     )
     add_definitions(-DQML_SINK)
 endif()
