@@ -7,22 +7,22 @@ project(
 
 qt6 = import('qt6')
 qt6_dep = dependency('qt6', modules : ['Core', 'Qml', 'Quick', 'Gui', 'DBus', 'Multimedia'])
-exec_dep = [qt6_dep]
+exec_dep = [qt6_dep, dependency('gstreamer-1.0'), dependency('gstreamer-pbutils-1.0')]
 
 headers = [
   'src/device_info.hpp',
-  'src/rauc.hpp'
+  'src/rauc.hpp',
+  'src/multimedia_formats.hpp'
 ]
 src = [
   'src/main.cpp',
   'src/device_info.cpp',
-  'src/rauc.cpp'
+  'src/rauc.cpp',
+  'src/multimedia_formats.cpp'
 ]
 
 qmlsink_option = get_option('qmlsink')
 if qmlsink_option.enabled()
-    gst_dep = dependency('gstreamer-1.0')
-    exec_dep += [gst_dep]
     add_project_arguments('-DQML_SINK', language : 'cpp')
     headers += ['src/multimedia_qmlsink.hpp']
     src += ['src/multimedia_qmlsink.cpp']

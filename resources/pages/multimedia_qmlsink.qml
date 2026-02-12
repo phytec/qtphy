@@ -21,6 +21,15 @@ Page {
             multimediaGST.pause()
             stack.pop()
         }
+        infoMenu {
+            text: PhyTheme.iconFont.info
+            font.family: icons.font.family
+            onClicked: {
+                multimediaInfo.visible = true
+                stack.push(multimediaInfo)
+            }
+            visible: true
+        }
         buttonMenu {
             text: PhyTheme.iconFont.folderOpen
             font.family: icons.font.family
@@ -123,5 +132,22 @@ Page {
         nameFilters: ["*.webm", "*.mp4"]
         onSelectedFileChanged:
             multimediaGST.setupNewPipeline(fileDialog.selectedFile)
+
+        Component.onCompleted: {
+            multimediaFormats.getContainerFormats([], true)
+                .filter(format => format.startsWith("video/"))
+                .map(format => format.includes(", ") ? format.slice(0, format.indexOf(", ")) : format)
+                .filter((format, index, formats) => index === formats.indexOf(format) && multimediaFormats.getExtensions(format).length > 0)
+                .forEach(format => {
+                    fileDialog.nameFilters = fileDialog.nameFilters.concat(multimediaFormats.getExtensions(format).map(extension => "*." + extension))
+                }
+            )
+            fileDialog.nameFilters = [...new Set(fileDialog.nameFilters)]
+        }
+    }
+
+    MultimediaInfo {
+        id: multimediaInfo
+        visible: false
     }
 }

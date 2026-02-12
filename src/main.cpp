@@ -12,6 +12,7 @@
 #include <QFile>
 #include "device_info.hpp"
 #include "rauc.hpp"
+#include "multimedia_formats.hpp"
 
 #ifdef QML_SINK
 #include "multimedia_qmlsink.hpp"
@@ -86,6 +87,9 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("multimediaPage", "multimedia_qmlsink.qml");
     engine.rootContext()->setContextProperty("multimediaGST", multimediaGST);
 #endif
+
+    MultimediaFormats *multimediaFormats = new MultimediaFormats(&app, argc, argv);
+    engine.rootContext()->setContextProperty("multimediaFormats", multimediaFormats);
 
     engine.load(QUrl(QStringLiteral("qrc:///main.qml")));
 

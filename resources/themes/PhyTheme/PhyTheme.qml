@@ -56,5 +56,6 @@ QtObject {
         readonly property string stop: "\ue047"
         readonly property string skipBack: "\ue045"
         readonly property string skipForward: "\ue044"
+        readonly property string info: "\ue88e"
     }
 }
