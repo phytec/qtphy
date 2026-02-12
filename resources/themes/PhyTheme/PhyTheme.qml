@@ -41,7 +41,7 @@ QtObject {
         readonly property string dotsThreeVertical: "\ue5d4"
         readonly property string code: "\ue86f"
         readonly property string cpu: "\ue322"
-        readonly property string file: "\ue66d"
+        readonly property string file: "\ue24d"
         readonly property string folder: "\ue2c7"
         readonly property string folderOpen: "\ue2c8"
         readonly property string frameCorners: "\ue3c2"
