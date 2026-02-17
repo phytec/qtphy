@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 option(QML_SINK, "Qt6 QML video sink plugin")
 
-project(qtphy VERSION 0.3.2 LANGUAGES CXX)
+project(qtphy VERSION 0.3.3 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
