@@ -93,14 +93,17 @@ Page {
                         checked: true
                     }
                     CheckBox {
-                        text: "phyCORE-i.MX 6 UL"
-                    }
-                    CheckBox {
                         text: "phyCORE-i.MX 8M Mini/Nano"
-                        checked: true
                     }
                     CheckBox {
                         text: "phyCORE-i.MX 8M Plus"
+                        checked: true
+                    }
+                    CheckBox {
+                        text: "phyFLEX-AM62Lx FPSC"
+                    }
+                    CheckBox {
+                        text: "phyFLEX-i.MX 95 FPSC"
                     }
                 }
             }
@@ -134,11 +137,13 @@ Page {
                             "phyCORE-i.MX 6 UL",
                             "phyCORE-i.MX 8M Mini",
                             "phyCORE-i.MX 8M Nano",
-                            "phyCORE-i.MX 8M Plus"]
+                            "phyCORE-i.MX 8M Plus",
+                            "phyFLEX-AM62Lx FPSC",
+                            "phyFLEX-i.MX 95 FPSC"]
                 }
                 ComboBox {
                     Layout.fillWidth: true
-                    model: ["phyCORE", "phyBOARD", "phyCAM", "phyGATE"]
+                    model: ["phyCORE", "phyFLEX", "phyBOARD", "phyCAM", "phyGATE"]
                     editable: true
                 }
                 SpinBox {
