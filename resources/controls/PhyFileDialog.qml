@@ -111,7 +111,7 @@ Rectangle {
                         folderListModel.folder = dialog.currentFile
                         listView.currentIndex = -1
                     } else {
-                        dialog.currentFile = fileURL
+                        dialog.currentFile = fileUrl
                     }
                 }
             }

@@ -53,7 +53,7 @@ Page {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        detailedImageView.filename = fileURL
+                        detailedImageView.filename = fileUrl
                         detailedImageView.title = fileName
                         detailedImageView.visible = true
                         gridViewGallery.visible = false
@@ -65,7 +65,7 @@ Page {
                     anchors.margins: PhyTheme.marginRegular
 
                     Image {
-                        source: fileURL
+                        source: fileUrl
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                         Layout.fillHeight: true
